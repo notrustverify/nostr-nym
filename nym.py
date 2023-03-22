@@ -4,7 +4,7 @@ import threading
 import time
 
 import websocket
-
+import asyncio
 from datetime import datetime
 import traceback
 import rel
@@ -63,17 +63,11 @@ class Serve:
 
         return json.dumps(dataToSend)
 
-    def __init__(self,queueRecvEvents, queueSendEvents, threadEvent):
+    def __init__(self):
         url = f"ws://{utils.NYM_CLIENT_ADDR}:1977"
         self.firstRun = True
-        self.queueRecvEvents = queueRecvEvents
-        self.queueSendEvents = queueSendEvents
-        self.threadEvent = threadEvent
 
         websocket.enableTrace(False)
-        eventRecv = threading.Thread(target=self.queueConsumer)
-        eventRecv.start()
-
 
         self.ws = websocket.WebSocketApp(url,
                                          on_message=lambda ws, msg: self.on_message(
@@ -119,7 +113,6 @@ class Serve:
             return
         finally:
             self.ws.close()
-            self.threadEvent.set()
 
 
     def on_close(self, ws):
@@ -176,7 +169,28 @@ class Serve:
                 recipient = None
 
             print(received_data)
-            self.queueRecvEvents.put({'data': received_data, 'senderTag': senderTag})
+
+            async def startNostr(msg):
+                import websockets
+
+                # Stablishes a connection / intantes the client.
+                # The client is actually an awaiting function that yields an
+                # object which can then be used to send and receive messages.
+                connection = websockets.connect(uri='ws://127.0.0.1:9001')
+
+                # The client is also as an asynchronous context manager.
+                async with connection as websocket:
+                # Sends a message.
+
+                    await websocket.send(json.dumps(msg))
+
+                    data = await websocket.recv()
+
+
+                await websocket.close()
+
+            #self.queueRecvEvents.put({'data': received_data, 'senderTag': senderTag})
+            asyncio.run(startNostr({'data': received_data, 'senderTag': senderTag}))
 
             if utils.DEBUG:
                 print(f"-> Got {received_message}")
@@ -193,3 +207,12 @@ class Serve:
             else:
                 print(f"No recipient found in message {received_message}")
                 return None
+
+
+    def nostrMessage(self):
+        pass
+
+
+
+if __name__ == '__main__':
+    Serve()

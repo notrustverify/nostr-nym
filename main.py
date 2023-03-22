@@ -9,9 +9,12 @@ threadEvent = threading.Event()   # define an Event
 def startThreads():
     import nym
     import nostr
+    import nostrv2
 
     nym = threading.Thread(target=nym.Serve, args=(queueRecvEvents, queueSendEvents,threadEvent))
-    nostr = threading.Thread(target=nostr.Serve, args=(queueRecvEvents, queueSendEvents,threadEvent))
+    #nostr = threading.Thread(target=nostrv2.Serve, args=(queueRecvEvents, queueSendEvents,threadEvent))
+
+    nostr = threading.Thread(target=nostrv2.Serve)
 
     nym.start()
     nostr.start()
