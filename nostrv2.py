@@ -47,10 +47,11 @@ class Serve:
 
         async with websockets.connect('ws://127.0.0.1:7000') as ws:
             # Sends a message.
+
             await ws.send(data['data'])
 
             answer = await ws.recv()
-            print(type(answer))
+            print(answer)
             self.server.send_message(client, answer)
         # Closes the connection.
 

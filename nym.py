@@ -2,6 +2,7 @@ import base64
 import json
 import threading
 import time
+from queue import Queue
 
 import websocket
 import asyncio
@@ -68,7 +69,7 @@ class Serve:
         self.firstRun = True
 
         websocket.enableTrace(False)
-
+        self.queueMessage = Queue()
         self.ws = websocket.WebSocketApp(url,
                                          on_message=lambda ws, msg: self.on_message(
                                              ws, msg),
@@ -170,6 +171,7 @@ class Serve:
 
             print(received_data)
 
+
             async def startNostr(msg):
                 import websockets
 
@@ -180,12 +182,17 @@ class Serve:
 
                 # The client is also as an asynchronous context manager.
                 async with connection as websocket:
-                # Sends a message.
-
+                    # Sends a message.
                     await websocket.send(json.dumps(msg))
 
-                    data = await websocket.recv()
-
+                    while True:
+                        try:
+                            name = await websocket.recv()
+                            self.ws.send(Serve.createPayload(recipient, name, senderTag))
+                            print(name)
+                        except websockets.ConnectionClosed:
+                            print(f"Terminated")
+                            break
 
                 await websocket.close()
 
