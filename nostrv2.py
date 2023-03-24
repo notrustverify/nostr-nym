@@ -45,17 +45,18 @@ class Serve:
         # The client is actually an awaiting function that yields an
         # object which can then be used to send and receive messages.
 
-        async with websockets.connect('ws://127.0.0.1:7000') as ws:
+        async with websockets.connect('ws://127.0.0.1:7000',timeout=100, close_timeout=100) as ws:
             # Sends a message.
 
             await ws.send(data['data'])
 
-            answer = await ws.recv()
-            print(answer)
-            self.server.send_message(client, answer)
-        # Closes the connection.
-
-            #await websocket.close()
+            while True:
+                try:
+                    asyncio.create_task(self.sendNostrMessage(client, await ws.recv()))
+                except websockets.ConnectionClosed:
+                    print(f"Terminated")
+                    await ws.close()
+                    break
 
 
 
@@ -63,8 +64,12 @@ class Serve:
     def message_received(self, client, server, message):
         print("Client(%d) said: %s" % (client['id'], message))
 
-        dataSend = asyncio.run(self.nostrMessage(client, message))
+        asyncio.run(self.nostrMessage(client, message))
 
+    async def sendNostrMessage(self,client,answer):
+        print(f"Nostr - Send event back, message: {answer}")
+
+        self.server.send_message(client,answer)
 
 if __name__ == "__main__":
     nostr = Serve()

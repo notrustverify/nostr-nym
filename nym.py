@@ -169,8 +169,10 @@ class Serve:
             else:
                 recipient = None
 
-            print(received_data)
-
+            if utils.DEBUG:
+                print(f"-> Got {received_message}")
+            else:
+                print(f"-> Got message from {senderTag}")
 
             async def startNostr(msg):
                 import websockets
@@ -187,22 +189,18 @@ class Serve:
 
                     while True:
                         try:
-                            name = await websocket.recv()
-                            self.ws.send(Serve.createPayload(recipient, name, senderTag))
-                            print(name)
+                            asyncio.create_task(self.nostrMessage(senderTag, await websocket.recv()))
                         except websockets.ConnectionClosed:
                             print(f"Terminated")
+                            websocket.close()
                             break
 
                 await websocket.close()
 
             #self.queueRecvEvents.put({'data': received_data, 'senderTag': senderTag})
-            asyncio.run(startNostr({'data': received_data, 'senderTag': senderTag}))
+            asyncio.create_task(startNostr({'data': received_data, 'senderTag': senderTag}))
 
-            if utils.DEBUG:
-                print(f"-> Got {received_message}")
-            else:
-                print(f"-> Got message from {senderTag}")
+
 
         except (IndexError, KeyError, json.JSONDecodeError) as e:
             if recipient is not None or senderTag is not None:
@@ -216,9 +214,9 @@ class Serve:
                 return None
 
 
-    def nostrMessage(self):
-        pass
-
+    async def nostrMessage(self, senderTag, replyMsg):
+        print(f"Send event back, message: {replyMsg}")
+        self.ws.send(Serve.createPayload(None, replyMsg, senderTag))
 
 
 if __name__ == '__main__':
