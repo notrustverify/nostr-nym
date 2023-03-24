@@ -1,12 +1,9 @@
 import json
 import threading
-import time
 import traceback
-
 import utils
 import websocket as websocketNostr
-import rel
-from nym import Serve
+
 
 NYM_KIND_TEXT = b'\x00'  # uint8
 NYM_KIND_BINARY = b'\x01'
@@ -53,13 +50,13 @@ class WebsocketHandler:
         return json.dumps(dataToSend)
 
     def __init__(self, senderTag, eventQueue,nymWsHandler):
-        url = f"ws://127.0.0.1:7000"
         self.firstRun = True
         self.eventQueue = eventQueue
         self.senderTag = senderTag
         self.wsReady = False
         self.nymWsHandler = nymWsHandler
 
+        url = f"{utils.NOSTR_RELAY_URI_PORT}"
         websocketNostr.enableTrace(False)
         self.wsNostr = websocketNostr.WebSocketApp(url,
                                                    on_message=lambda ws, msg: self.on_message(
@@ -72,11 +69,10 @@ class WebsocketHandler:
                                                    )
 
         threading.Thread(target=self.eventHandler, daemon=True).start()
+
         # Set dispatcher to automatic reconnection
         self.wsNostr.run_forever(ping_interval=30, ping_timeout=10)
 
-        rel.signal(2, rel.abort)  # Keyboard Interrupt
-        rel.dispatch()
         self.wsNostr.close()
 
     def on_message(self, ws, message):
@@ -103,9 +99,8 @@ class WebsocketHandler:
         print("Interprocess communication started")
         while True:
             msg = self.eventQueue.get()
-            print(msg)
+            print(f"Received event from client: {msg}")
             while not self.wsReady:
                 pass
 
             self.wsNostr.send(msg)
-            #self.ws.send(WebsocketHandler.createPayload(None, msg, self.senderTag))

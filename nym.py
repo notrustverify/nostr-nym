@@ -1,16 +1,9 @@
-import base64
 import json
 import queue
-import time
-from queue import Queue
-import websocketHandler
 import websocket
-import asyncio
-from datetime import datetime
 import traceback
 import rel
 import utils
-from _thread import *
 import threading
 
 self_address_request = json.dumps({
@@ -67,13 +60,13 @@ class Serve:
         return json.dumps(dataToSend)
 
     def __init__(self):
-        url = f"ws://{utils.NYM_CLIENT_ADDR}:1977"
+        url = f"ws://{utils.NYM_CLIENT_ADDR}:{utils.NYM_CLIENT_PORT}"
         self.firstRun = True
-        self.clientQueues={}
+        self.clientQueues = {}
 
         websocket.enableTrace(False)
         self.ws = websocket.WebSocketApp(url,
-                                         on_message=lambda ws, msg:  self.on_message(
+                                         on_message=lambda ws, msg: self.on_message(
                                              ws, msg),
                                          on_error=lambda ws, msg: self.on_error(
                                              ws, msg),
@@ -90,19 +83,8 @@ class Serve:
         rel.dispatch()
         self.ws.close()
 
-
-    def queueConsumer(self):
-        while True:
-            event = self.queueSendEvents.get()
-            print(f"New event to forward: {event['data']}")
-            self.ws.send(Serve.createPayload(None,
-                event, senderTag=event['senderTag']))
-
-            time.sleep(0.1)
-
     def on_pong(self, ws, msg):
         ws.send(self_address_request)
-
 
     def on_open(self, ws):
         self.ws.send(self_address_request)
@@ -116,7 +98,6 @@ class Serve:
             return
         finally:
             self.ws.close()
-
 
     def on_close(self, ws):
         print(f"Connection to nym-client closed")
@@ -176,18 +157,7 @@ class Serve:
             else:
                 print(f"-> Got message from {senderTag}")
 
-            if self.clientQueues.get(senderTag):
-                print(f"put message to queue {senderTag}")
-                self.clientQueues[senderTag].put(received_data)
-            else:
-                print(f"Create queue for {senderTag}")
-                self.createQueueClient(senderTag)
-                print(f"Start thread")
-                nostrHandler = threading.Thread(target=websocketHandler.WebsocketHandler,
-                             args=(senderTag, self.clientQueues[senderTag],self.ws,), daemon=True)
-                nostrHandler.start()
-                print(self.clientQueues)
-                self.clientQueues[senderTag].put(received_data)
+            self.manageClient(senderTag, received_data)
 
         except (IndexError, KeyError, json.JSONDecodeError) as e:
             traceback.print_exc()
@@ -202,45 +172,22 @@ class Serve:
                 print(f"No recipient found in message {received_message}")
                 return None
 
+    def manageClient(self, senderTag, event):
+        if self.clientQueues.get(senderTag):
+            print(f"Put message to queue {senderTag}")
+            self.clientQueues[senderTag].put(event)
+        else:
+            print(f"Create queue for {senderTag}")
+            self.createQueueClient(senderTag)
+            print(f"Start thread")
+            threading.Thread(target=websocketHandler.WebsocketHandler,
+                             args=(senderTag, self.clientQueues[senderTag], self.ws,),
+                             daemon=True).start()
+            print(self.clientQueues)
+            self.clientQueues[senderTag].put(event)
 
-    def createQueueClient(self,senderTag):
+    def createQueueClient(self, senderTag):
         self.clientQueues.update({senderTag: queue.Queue()})
-
-    def startNostr(self, senderTag, queue):
-        asyncio.run(self.nostrHandle(senderTag,queue))
-
-    async def nostrMessage(self, senderTag, replyMsg):
-        print(f"Received event back, message: {replyMsg}")
-        self.ws.send(Serve.createPayload(None, replyMsg, senderTag))
-
-    async def nostrHandle(self,senderTag, eventQueue):
-        import websockets
-        print(eventQueue)
-        # Stablishes a connection / intantes the client.
-        # The client is actually an awaiting function that yields an
-        # object which can then be used to send and receive messages.
-        ws = websocketHandler.WebsocketHandler(eventQueue)
-        connection = websockets.connect(uri='ws://127.0.0.1:7000')
-
-        # The client is also as an asynchronous context manager.
-        async with connection as websocket:
-            # Sends a message.
-            while True:
-                try:
-                    print("sdkfgjsjfsg")
-                    msg = eventQueue.get()
-                    print(f"Send event: {msg}")
-                    await websocket.send(msg)
-                    async for text in websocket:
-                        self.nostrMessage(senderTag, await websocket.recv())
-                    print("sdfjksdfhdjs")
-                except websockets.ConnectionClosed:
-
-                    print(f"Terminated")
-                    websocket.close()
-                    break
-
-        await websocket.close()
 
 
 if __name__ == '__main__':
