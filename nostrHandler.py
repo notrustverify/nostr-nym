@@ -19,7 +19,7 @@ HEADER_APPLICATION_JSON = "{\"mimeType\":\"application/json\",\"headers\":null}"
 TOTAL_HEADERS_PAD_SIZE = len(HEADER_APPLICATION_JSON) + len(NYM_HEADER_SIZE_TEXT) + len(
     HEADER_APPLICATION_JSON_BYTE) + 1
 
-class WebsocketHandler:
+class NostrHandler:
 
     @staticmethod
     def createPayload(recipient, reply_message, senderTag=None, is_text=True, nopadding=False):
@@ -76,7 +76,7 @@ class WebsocketHandler:
         self.wsNostr.close()
 
     def on_message(self, ws, message):
-        self.nymWsHandler.send(WebsocketHandler.createPayload(None, message, self.senderTag))
+        self.nymWsHandler.send(NostrHandler.createPayload(None, message, self.senderTag))
 
     def on_close(self, ws):
         print(f"Connection to nym-client closed")

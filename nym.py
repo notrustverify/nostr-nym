@@ -5,6 +5,7 @@ import traceback
 import rel
 import utils
 import threading
+import nostrHandler
 
 self_address_request = json.dumps({
     "type": "selfAddress"
@@ -180,7 +181,7 @@ class Serve:
             print(f"Create queue for {senderTag}")
             self.createQueueClient(senderTag)
             print(f"Start thread")
-            threading.Thread(target=websocketHandler.WebsocketHandler,
+            threading.Thread(target=nostrHandler.NostrHandler,
                              args=(senderTag, self.clientQueues[senderTag], self.ws,),
                              daemon=True).start()
             print(self.clientQueues)
