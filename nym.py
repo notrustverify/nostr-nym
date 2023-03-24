@@ -1,8 +1,9 @@
 import base64
 import json
+import queue
 import time
 from queue import Queue
-
+import websocketHandler
 import websocket
 import asyncio
 from datetime import datetime
@@ -68,11 +69,11 @@ class Serve:
     def __init__(self):
         url = f"ws://{utils.NYM_CLIENT_ADDR}:1977"
         self.firstRun = True
+        self.clientQueues={}
 
         websocket.enableTrace(False)
-        self.queueMessage = Queue()
         self.ws = websocket.WebSocketApp(url,
-                                         on_message=lambda ws, msg: self.on_message(
+                                         on_message=lambda ws, msg:  self.on_message(
                                              ws, msg),
                                          on_error=lambda ws, msg: self.on_error(
                                              ws, msg),
@@ -175,11 +176,22 @@ class Serve:
             else:
                 print(f"-> Got message from {senderTag}")
 
-            threading.Thread(target=self.startNostr, args=({'data': received_data, 'senderTag': senderTag},),daemon=True).start()
-
-
+            if self.clientQueues.get(senderTag):
+                print(f"put message to queue {senderTag}")
+                self.clientQueues[senderTag].put(received_data)
+            else:
+                print(f"Create queue for {senderTag}")
+                self.createQueueClient(senderTag)
+                print(f"Start thread")
+                nostrHandler = threading.Thread(target=websocketHandler.WebsocketHandler,
+                             args=(senderTag, self.clientQueues[senderTag],self.ws,), daemon=True)
+                nostrHandler.start()
+                print(self.clientQueues)
+                self.clientQueues[senderTag].put(received_data)
 
         except (IndexError, KeyError, json.JSONDecodeError) as e:
+            traceback.print_exc()
+
             if recipient is not None or senderTag is not None:
                 err_msg = f"Error parsing message: {e}"
                 reply_message = err_msg
@@ -191,30 +203,39 @@ class Serve:
                 return None
 
 
-    def startNostr(self,data):
-        asyncio.run(self.nostrHandle(data))
+    def createQueueClient(self,senderTag):
+        self.clientQueues.update({senderTag: queue.Queue()})
+
+    def startNostr(self, senderTag, queue):
+        asyncio.run(self.nostrHandle(senderTag,queue))
 
     async def nostrMessage(self, senderTag, replyMsg):
-        print(f"Send event back, message: {replyMsg}")
+        print(f"Received event back, message: {replyMsg}")
         self.ws.send(Serve.createPayload(None, replyMsg, senderTag))
 
-    async def nostrHandle(self,msg):
+    async def nostrHandle(self,senderTag, eventQueue):
         import websockets
-
+        print(eventQueue)
         # Stablishes a connection / intantes the client.
         # The client is actually an awaiting function that yields an
         # object which can then be used to send and receive messages.
-        connection = websockets.connect(uri='ws://127.0.0.1:9001')
+        ws = websocketHandler.WebsocketHandler(eventQueue)
+        connection = websockets.connect(uri='ws://127.0.0.1:7000')
 
         # The client is also as an asynchronous context manager.
         async with connection as websocket:
             # Sends a message.
-            await websocket.send(json.dumps(msg))
-
             while True:
                 try:
-                    asyncio.create_task(self.nostrMessage(msg['senderTag'], await websocket.recv()))
+                    print("sdkfgjsjfsg")
+                    msg = eventQueue.get()
+                    print(f"Send event: {msg}")
+                    await websocket.send(msg)
+                    async for text in websocket:
+                        self.nostrMessage(senderTag, await websocket.recv())
+                    print("sdfjksdfhdjs")
                 except websockets.ConnectionClosed:
+
                     print(f"Terminated")
                     websocket.close()
                     break

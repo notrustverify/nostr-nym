@@ -30,6 +30,7 @@ class Serve:
     # Called for every client connecting (after handshake)
     def new_client(self, client, server):
         print("New client connected and was given id %d" % client['id'])
+
         # self.server.send_message_to_all("Hey all, a new client has joined us")
         # self.server.send_message(client,f"Hey {client['id']}")
 
@@ -65,6 +66,7 @@ class Serve:
         print("Client(%d) said: %s" % (client['id'], message))
 
         asyncio.run(self.nostrMessage(client, message))
+
 
     async def sendNostrMessage(self,client,answer):
         print(f"Nostr - Send event back, message: {answer}")
