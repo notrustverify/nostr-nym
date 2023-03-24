@@ -32,4 +32,8 @@ For example
 echo '{"type": "sendAnonymous", "message": "[\"REQ\", \"RAND\", {\"limit\": 2}]", "recipient": "<service provider nym-client id>", "replySurbs": 100}' | websocat <nym-client URI>
 ```
 
+### Search
+```json
+{"type": "sendAnonymous","message": "[\"REQ\", \"\", {\"search\": \"hello\"}]","recipient": "7W6fQsAT6sdsqFxwUJBRZFEJkSLncQzTzvN4rmXnc2vi.29MhA8hD1dsxLqEbqi6xXSEkhc1bARnUApxvwn8tfauB@E7BuKRJw4XD8pYmLHEfZ94waoZsyuJupYRQrBiC5FQLB", "replySurbs": 100}
+```
 

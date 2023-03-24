@@ -1,6 +1,5 @@
 import base64
 import json
-import threading
 import time
 from queue import Queue
 
@@ -10,6 +9,8 @@ from datetime import datetime
 import traceback
 import rel
 import utils
+from _thread import *
+import threading
 
 self_address_request = json.dumps({
     "type": "selfAddress"
@@ -174,31 +175,7 @@ class Serve:
             else:
                 print(f"-> Got message from {senderTag}")
 
-            async def startNostr(msg):
-                import websockets
-
-                # Stablishes a connection / intantes the client.
-                # The client is actually an awaiting function that yields an
-                # object which can then be used to send and receive messages.
-                connection = websockets.connect(uri='ws://127.0.0.1:9001')
-
-                # The client is also as an asynchronous context manager.
-                async with connection as websocket:
-                    # Sends a message.
-                    await websocket.send(json.dumps(msg))
-
-                    while True:
-                        try:
-                            asyncio.create_task(self.nostrMessage(senderTag, await websocket.recv()))
-                        except websockets.ConnectionClosed:
-                            print(f"Terminated")
-                            websocket.close()
-                            break
-
-                await websocket.close()
-
-            #self.queueRecvEvents.put({'data': received_data, 'senderTag': senderTag})
-            asyncio.create_task(startNostr({'data': received_data, 'senderTag': senderTag}))
+            threading.Thread(target=self.startNostr, args=({'data': received_data, 'senderTag': senderTag},),daemon=True).start()
 
 
 
@@ -214,9 +191,35 @@ class Serve:
                 return None
 
 
+    def startNostr(self,data):
+        asyncio.run(self.nostrHandle(data))
+
     async def nostrMessage(self, senderTag, replyMsg):
         print(f"Send event back, message: {replyMsg}")
         self.ws.send(Serve.createPayload(None, replyMsg, senderTag))
+
+    async def nostrHandle(self,msg):
+        import websockets
+
+        # Stablishes a connection / intantes the client.
+        # The client is actually an awaiting function that yields an
+        # object which can then be used to send and receive messages.
+        connection = websockets.connect(uri='ws://127.0.0.1:9001')
+
+        # The client is also as an asynchronous context manager.
+        async with connection as websocket:
+            # Sends a message.
+            await websocket.send(json.dumps(msg))
+
+            while True:
+                try:
+                    asyncio.create_task(self.nostrMessage(msg['senderTag'], await websocket.recv()))
+                except websockets.ConnectionClosed:
+                    print(f"Terminated")
+                    websocket.close()
+                    break
+
+        await websocket.close()
 
 
 if __name__ == '__main__':
