@@ -1,8 +1,12 @@
 import json
 import queue
+import sys
+
 import websocket
 import traceback
 import rel
+from websocket import WebSocketAddressException
+
 import utils
 import threading
 import nostrHandler
@@ -64,21 +68,23 @@ class Serve:
         url = f"{utils.NYM_CLIENT_URI}"
         self.firstRun = True
         self.clientQueues = {}
-
+        self.url = url
         websocket.enableTrace(False)
-        self.ws = websocket.WebSocketApp(url,
+
+        self.ws = websocket.WebSocketApp(self.url,
                                          on_message=lambda ws, msg: self.on_message(
                                              ws, msg),
                                          on_error=lambda ws, msg: self.on_error(
                                              ws, msg),
-                                         on_close=lambda ws: self.on_close(
-                                             ws),
+                                         on_close=lambda ws, close_status_code, close_msg: self.on_close(ws,
+                                                                                                         close_status_code,
+                                                                                                         close_msg),
                                          on_open=lambda ws: self.on_open(ws),
-                                         on_pong=lambda ws, msg: self.on_pong(ws, msg)
+                                         # on_pong=lambda ws, msg: self.on_pong(ws, msg)
                                          )
 
         # Set dispatcher to automatic reconnection
-        self.ws.run_forever(ping_interval=30, ping_timeout=10)
+        self.ws.run_forever()
 
         rel.signal(2, rel.abort)  # Keyboard Interrupt
         rel.dispatch()
@@ -93,15 +99,25 @@ class Serve:
     def on_error(self, ws, message):
         try:
             print(f"Error ws: {message}")
-            traceback.print_exc()
+
+            if type(message) == WebSocketAddressException:
+                print(f"nym-client {self.url} is not accessible, quit")
+                raise ValueError(WebSocketAddressException)
+
+            if type(message) == UnicodeDecodeError:
+                return
+
         except UnicodeDecodeError as e:
             print(f"Unicode error, nothing to do about: {e}")
             return
-        finally:
+        except:
+            traceback.print_exc()
             self.ws.close()
+            sys.exit(1)
 
-    def on_close(self, ws):
-        print(f"Connection to nym-client closed")
+    def on_close(self, ws, close_status_code, close_msg):
+        print(f"Connection to nym-client closed, close_status_code {close_status_code}, close_msg {close_msg}")
+        sys.exit()
 
     def on_message(self, ws, message):
         try:
