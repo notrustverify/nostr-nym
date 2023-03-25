@@ -230,6 +230,4 @@ docker-compose.yml
 relay/*
 !relay/config.toml
 
-nym-client/*
-
-!nym-client/Dockerfile.*
+nym-client/nym-data
