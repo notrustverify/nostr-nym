@@ -1,0 +1,39 @@
+version: '3.9'
+
+
+services:
+
+  relay:
+    hostname: relay
+    image: scsibug/nostr-rs-relay
+    restart: unless-stopped
+    ports:
+      - 7000:8080
+    volumes:
+      - ./relay/config.toml:/usr/src/app/config.toml
+      - ./relay/data:/usr/src/app/db
+
+  proxy:
+    hostname: proxy
+    build:
+      dockerfile: proxy/Dockerfile
+    restart: unless-stopped
+    environment:
+      #- NOSTR_RELAY_URI_PORT=wss://relay.damus.io
+      - NOSTR_RELAY_URI_PORT=ws://relay:8080
+      - NYM_CLIENT_URI=ws://nym-client:1977
+    depends_on:
+      - nym-client
+      - relay
+
+  nym-client:
+    hostname: nym-client
+    build:
+      context: ./nym-client
+      dockerfile: Dockerfile.nobuild
+    restart: unless-stopped
+    environment:
+      - NAME_CLIENT=nostr-nym
+      - LISTENING_ADDRESS=0.0.0.0
+    volumes:
+       - ./nym-client/nym-data/:/home/user/.nym/
