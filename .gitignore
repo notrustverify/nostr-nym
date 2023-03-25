@@ -224,3 +224,11 @@ fabric.properties
 # End of https://www.toptal.com/developers/gitignore/api/pycharm+all
 
 
+.env
+docker-compose.yml 
+
+relay/*
+!relay/config.toml
+
+nym-client/*
+!nym-client/.gitkeep
