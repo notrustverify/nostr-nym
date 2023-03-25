@@ -94,7 +94,7 @@ async def subscribe(msg, nymClientURI):
             except (websocket.WebSocketConnectionClosedException, websocket.WebSocketTimeoutException) as e:
                 print(f"websocket error: {e}")
             finally:
-                websocket.close()
+               await websocket.close()
 
 
 
