@@ -6,8 +6,8 @@ FROM python
 #RUN ["apt-get", "install","vim", "python3", "python3-pip",  "ca-certificates" ,"curl", "gnupg" ,"lsb-release", "git" ,"-y"]
 RUN ["pip", "install", "pipenv"]
 
-COPY ../*.py .
-COPY ../Pipfile* .
+COPY ./*.py ./
+COPY ./Pipfile* ./
 
 RUN ["pipenv", "install", "--system", "--deploy","--ignore-pipfile" ]
 ENV PYTHONUNBUFFERED 1
