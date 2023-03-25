@@ -30,6 +30,9 @@ pipenv shell
 
 A public relay is available at `2gc9QidpXs4YGKmphinsDhWTHxdy2TZgWYWz2VenN5jL.dkwwJqS1zXa9BuPAFdniRN2HxFvAbTybAmrUHGAT5KV@2BuMSfMW3zpeAjKXyKLhmY4QW1DXurrtSPEJ6CjX3SEh`
 
+
+Start the nym-client `./nym-client run --id nostr-client`
+
 | *Name* | *Default*                  | *Description*                                               |
 |--------|----------------------------|-------------------------------------------------------------|
 | `cmd`    | Mandatory `text-note` or `subscribe`                 | Select the action to, `text-note` or `subscribe`            |
