@@ -5,12 +5,10 @@ name = "pypi"
 
 [packages]
 websocket-client = "1.4.1"
-rel = "*"
+rel = "==0.4.8"
 python-dotenv = "0.21.0"
-websocket-server = "*"
-websockets = "*"
-nostr = "*"
-secp256k1 = "*"
+websockets = "==10.4 "
+
 
 [dev-packages]
 

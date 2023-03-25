@@ -56,9 +56,9 @@ class NostrHandler:
         self.wsReady = False
         self.nymWsHandler = nymWsHandler
 
-        url = f"{utils.NOSTR_RELAY_URI_PORT}"
+        self.url = f"{utils.NOSTR_RELAY_URI_PORT}"
         websocketNostr.enableTrace(False)
-        self.wsNostr = websocketNostr.WebSocketApp(url,
+        self.wsNostr = websocketNostr.WebSocketApp(self.url,
                                                    on_message=lambda ws, msg: self.on_message(
                                              ws, msg),
                                                    on_error=lambda ws, msg: self.on_error(
@@ -79,7 +79,13 @@ class NostrHandler:
         self.nymWsHandler.send(NostrHandler.createPayload(None, message, self.senderTag))
 
     def on_close(self, ws):
-        print(f"Connection to nym-client closed")
+        print(f"Connection with {self.senderTag} closed")
+
+        try:
+            self.wsNostr.close()
+        except:
+            print(f"Error with closing ws for {self.senderTag}")
+
 
     def on_error(self, ws, message):
         try:
@@ -92,7 +98,7 @@ class NostrHandler:
             self.wsNostr.close()
 
     def on_open(self, ws):
-        print("Websocket started")
+        print(f"Websocket started. Connected to {self.url}")
         self.wsReady = True
 
     def eventHandler(self):

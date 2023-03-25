@@ -1,10 +1,13 @@
 
 # Nostr-Nym
 
+[![asciicast](https://asciinema.org/a/569963.svg)](https://asciinema.org/a/569963)
 
 ## Not trough Nym
 
 To use Nostr with CLI, [nostr-tool](https://github.com/0xtrr/nostr-tool) is good
+
+
 
 ### Create an event
 
@@ -53,4 +56,4 @@ Example
 ```
 
 
-
+{"type": "sendAnonymous","message": "[\"REQ\", \"RAND\", {\"limit\": 2}]","recipient": "9fa8LFUxg48oHDZZdQhUiKoifQhDGP6CCVcgKQTXWTWT.8c3aQjfbRLSqvczE3RwzBUjwsnWbQQ49nH8n8ePMdKLF@7fiZtNL1RACQTwGrKLBT9nbY77bfwZnX9rqcWqc53qgv", "replySurbs": 100}

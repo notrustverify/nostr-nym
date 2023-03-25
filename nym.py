@@ -61,7 +61,7 @@ class Serve:
         return json.dumps(dataToSend)
 
     def __init__(self):
-        url = f"ws://{utils.NYM_CLIENT_ADDR}:{utils.NYM_CLIENT_PORT}"
+        url = f"{utils.NYM_CLIENT_URI}"
         self.firstRun = True
         self.clientQueues = {}
 

@@ -1,6 +1,13 @@
+import sys
+import time
+
 import nym
 
-
-# Press the green button in the gutter to run the script.
 if __name__ == '__main__':
+
+    # wait for nym-client to start
+    time.sleep(10)
+
     nym.Serve()
+
+
