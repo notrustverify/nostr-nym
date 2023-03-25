@@ -7,11 +7,12 @@ import websockets
 from binascii import unhexlify, hexlify
 from nostr import bech32
 import argparse
+
+from websocket import WebSocketConnectionClosedException, WebSocketTimeoutException
+
 import nym
-from nostr.key import PrivateKey, PublicKey
+from nostr.key import PrivateKey
 from nostr.event import Event, EventKind
-from nostr.subscription import Subscription
-from nostr.bech32 import Encoding, bech32_encode
 from nostr.key import PublicKey
 
 
@@ -43,7 +44,7 @@ def parseNewEvent(received_message):
             newEventData = answer[2]
     except IndexError as e:
         print(f"Error parsing message {answer}, error {e}")
-        return False
+        return
 
     noteid = newEventData['id']
     fromPub = newEventData['pubkey']
@@ -61,8 +62,6 @@ def parseNewEvent(received_message):
           f"\n\t 📜 content: {content}"
           f"\n\t 🖋️ signature: {sig[:21]}...")
 
-    return True
-
 
 def parseNymMessage(received_message):
     answer = getNostrPayload(received_message)
@@ -74,7 +73,7 @@ def parseNymMessage(received_message):
 
 
 async def publish(msg, nymClientURI):
-    async with websockets.connect(nymClientURI) as websocket:
+    async with websockets.connect(nymClientURI, ) as websocket:
         await websocket.send(msg)
 
         msg = await websocket.recv()
@@ -91,13 +90,13 @@ async def subscribe(msg, nymClientURI):
             try:
                 response = await websocket.recv()
                 parseNewEvent(response)
-            except (websocket.WebSocketConnectionClosedException, websocket.WebSocketTimeoutException) as e:
+            except  asyncio.IncompleteReadError as e:
+                pass
+            except (WebSocketConnectionClosedException, WebSocketTimeoutException) as e:
                 print(f"websocket error: {e}")
-            finally:
-               await websocket.close()
+                continue
 
-
-
+        websocket.close()
 
 
 def newTextNote(relay, nymClientURI, privateKey, message, tags=[]):
