@@ -231,4 +231,5 @@ relay/*
 !relay/config.toml
 
 nym-client/*
-!nym-client/.gitkeep
+
+!nym-client/Dockerfile.*
