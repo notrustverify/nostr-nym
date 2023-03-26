@@ -4,7 +4,6 @@ import traceback
 import utils
 import websocket as websocketNostr
 
-
 NYM_KIND_TEXT = b'\x00'  # uint8
 NYM_KIND_BINARY = b'\x01'
 
@@ -18,6 +17,7 @@ HEADER_APPLICATION_JSON_BYTE = b"."
 HEADER_APPLICATION_JSON = "{\"mimeType\":\"application/json\",\"headers\":null}"
 TOTAL_HEADERS_PAD_SIZE = len(HEADER_APPLICATION_JSON) + len(NYM_HEADER_SIZE_TEXT) + len(
     HEADER_APPLICATION_JSON_BYTE) + 1
+
 
 class NostrHandler:
 
@@ -49,7 +49,7 @@ class NostrHandler:
 
         return json.dumps(dataToSend)
 
-    def __init__(self, senderTag, eventQueue,nymWsHandler):
+    def __init__(self, senderTag, eventQueue, nymWsHandler):
         self.firstRun = True
         self.eventQueue = eventQueue
         self.senderTag = senderTag
@@ -60,11 +60,11 @@ class NostrHandler:
         websocketNostr.enableTrace(False)
         self.wsNostr = websocketNostr.WebSocketApp(self.url,
                                                    on_message=lambda ws, msg: self.on_message(
-                                             ws, msg),
+                                                       ws, msg),
                                                    on_error=lambda ws, msg: self.on_error(
-                                             ws, msg),
-                                                   on_close=lambda ws: self.on_close(
-                                             ws),
+                                                       ws, msg),
+                                                   on_close=lambda ws, close_status_code, close_msg: self.on_close(
+                                                       ws, close_status_code, close_msg),
                                                    on_open=lambda ws: self.on_open(ws),
                                                    )
 
@@ -78,14 +78,13 @@ class NostrHandler:
     def on_message(self, ws, message):
         self.nymWsHandler.send(NostrHandler.createPayload(None, message, self.senderTag))
 
-    def on_close(self, ws):
+    def on_close(self, ws, close_status_code, close_msg):
         print(f"Connection with {self.senderTag} closed")
 
         try:
             self.wsNostr.close()
         except:
-            print(f"Error with closing ws for {self.senderTag}")
-
+            print(f"Error closing ws for {self.senderTag}")
 
     def on_error(self, ws, message):
         try:

@@ -102,6 +102,7 @@ class Serve:
 
             if type(message) == WebSocketAddressException:
                 print(f"nym-client {self.url} is not accessible, quit")
+                self.ws.close()
                 raise ValueError(WebSocketAddressException)
 
             if type(message) == UnicodeDecodeError:
@@ -116,7 +117,7 @@ class Serve:
             sys.exit(1)
 
     def on_close(self, ws, close_status_code, close_msg):
-        print(f"Connection to nym-client closed, close_status_code {close_status_code}, close_msg {close_msg}")
+        print(f"Connection to {self.url} closed, close_status_code {close_status_code}, close_msg {close_msg}")
         sys.exit()
 
     def on_message(self, ws, message):
@@ -133,6 +134,7 @@ class Serve:
             if received_message.get('address'):
                 return
 
+            senderTag = None
             recipient = None
 
         except UnicodeDecodeError as e:
@@ -174,6 +176,7 @@ class Serve:
             else:
                 print(f"-> Got message from {senderTag}")
 
+            # spwan a new thread or put the event in the queue
             self.manageClient(senderTag, received_data)
 
         except (IndexError, KeyError, json.JSONDecodeError) as e:
@@ -191,20 +194,31 @@ class Serve:
 
     def manageClient(self, senderTag, event):
         if self.clientQueues.get(senderTag):
-            print(f"Put message to queue {senderTag}")
+            print(f"Put message in queue {senderTag}")
             self.clientQueues[senderTag].put(event)
         else:
-            print(f"Create queue for {senderTag}")
+
             self.createQueueClient(senderTag)
             print(f"Start thread")
             threading.Thread(target=nostrHandler.NostrHandler,
                              args=(senderTag, self.clientQueues[senderTag], self.ws,),
                              daemon=True).start()
-            print(self.clientQueues)
+
+            print(f"Create queue for {senderTag}"
+                  f"\nActual number of client: {len(self.clientQueues)}"
+                  f"\nNumber of thread: {threading.active_count()}")
+
             self.clientQueues[senderTag].put(event)
 
     def createQueueClient(self, senderTag):
         self.clientQueues.update({senderTag: queue.Queue()})
+
+    def queueCleaner(self):
+        while True:
+            for client, queueClient  in self.clientQueues.items():
+                if queueClient.qsize() > 0:
+                    message = queueClient.get()
+
 
 
 if __name__ == '__main__':
