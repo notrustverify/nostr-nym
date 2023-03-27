@@ -1,6 +1,7 @@
 import json
 import queue
 import sys
+import time
 
 import websocket
 import traceback
@@ -82,6 +83,8 @@ class Serve:
                                          on_open=lambda ws: self.on_open(ws),
                                          # on_pong=lambda ws, msg: self.on_pong(ws, msg)
                                          )
+        #print("Start Queue cleaner thread")
+        #threading.Thread(target=self.queueCleaner,daemon=True).start()
 
         # Set dispatcher to automatic reconnection
         self.ws.run_forever()
@@ -176,6 +179,7 @@ class Serve:
             else:
                 print(f"-> Got message from {senderTag}")
 
+
             # spwan a new thread or put the event in the queue
             self.manageClient(senderTag, received_data)
 
@@ -194,14 +198,18 @@ class Serve:
 
     def manageClient(self, senderTag, event):
         if self.clientQueues.get(senderTag):
+
             print(f"Put message in queue {senderTag}")
             self.clientQueues[senderTag].put(event)
+
+            if event == "quit":
+                self.removeQueue(senderTag)
         else:
 
             self.createQueueClient(senderTag)
             print(f"Start thread")
             threading.Thread(target=nostrHandler.NostrHandler,
-                             args=(senderTag, self.clientQueues[senderTag][0],self.clientQueues[senderTag][1], self.ws,),
+                             args=(senderTag, self.clientQueues[senderTag], self.ws,),
                              daemon=True).start()
 
             print(f"Create queue for {senderTag}"
@@ -211,18 +219,19 @@ class Serve:
             self.clientQueues[senderTag].put(event)
 
     def createQueueClient(self, senderTag):
-        # create 2 queue, first one is nym.py to nostrHandle.py other one
-        # is for signaling when nostr client disconnect
-        self.clientQueues.update({senderTag: [queue.Queue(), queue.Queue()]})
+        self.clientQueues.update({senderTag: queue.Queue()})
 
     def queueCleaner(self):
         while True:
             for client, queueClient in self.clientQueues.items():
                 if queueClient[1].qsize() > 0:
-                    message = queueClient.get()
+                    message = queueClient[1].get()
                     print(message)
 
+            time.sleep(1)
 
+    def removeQueue(self,senderTag):
+        del self.clientQueues[senderTag]
 
 if __name__ == '__main__':
     Serve()

@@ -51,7 +51,9 @@ class NostrHandler:
 
     def __init__(self, senderTag, eventQueue, nymWsHandler):
         self.firstRun = True
+
         self.eventQueue = eventQueue
+
         self.senderTag = senderTag
         self.wsReady = False
         self.nymWsHandler = nymWsHandler
@@ -76,12 +78,16 @@ class NostrHandler:
         self.wsNostr.close()
 
     def on_message(self, ws, message):
+        if utils.DEBUG:
+            print(message)
+
         self.nymWsHandler.send(NostrHandler.createPayload(None, message, self.senderTag))
 
     def on_close(self, ws, close_status_code, close_msg):
         print(f"Connection with {self.senderTag} closed")
 
         try:
+            self.nymWsHandler.send(NostrHandler.createPayload(None, "ok", self.senderTag))
             self.wsNostr.close()
         except:
             print(f"Error closing ws for {self.senderTag}")
@@ -107,5 +113,9 @@ class NostrHandler:
             print(f"Received event from client: {msg}")
             while not self.wsReady:
                 pass
+
+            if msg == "quit":
+                self.wsNostr.close()
+                return
 
             self.wsNostr.send(msg)

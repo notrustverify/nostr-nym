@@ -1,13 +1,14 @@
 import asyncio
 import datetime
 import json
+import signal
 import sys
 
 import websockets
 from binascii import unhexlify, hexlify
 from nostr import bech32
 import argparse
-
+from signal import SIGINT, SIGTERM
 from websocket import WebSocketConnectionClosedException, WebSocketTimeoutException
 
 import nym
@@ -72,17 +73,38 @@ def parseNymMessage(received_message):
             print(f"Error with note: {answer}")
 
 
-async def publish(msg, nymClientURI):
-    async with websockets.connect(nymClientURI, ) as websocket:
+async def signalingMsg(msg, nymClientURI, waitForAnswer=False):
+    async with websockets.connect(nymClientURI) as websocket:
+        await websocket.send(msg)
+        print("quit")
+
+        try:
+            if waitForAnswer:
+                await websocket.recv()
+                # print(response)
+        except asyncio.IncompleteReadError as e:
+            pass
+        except (WebSocketConnectionClosedException, WebSocketTimeoutException) as e:
+            print(f"websocket error: {e}")
+        except RuntimeError:
+            pass
+
+        await websocket.close()
+
+
+async def publish(msg, nymClientURI, relay):
+    async with websockets.connect(nymClientURI) as websocket:
         await websocket.send(msg)
 
         msg = await websocket.recv()
         parseNymMessage(msg)
 
+        await websocket.send(nym.createPayload(relay, "quit"))
+
         await websocket.close()
 
 
-async def subscribe(msg, nymClientURI):
+async def subscribe(msg, nymClientURI, relay):
     async with websockets.connect(nymClientURI) as websocket:
         await websocket.send(msg)
 
@@ -90,16 +112,23 @@ async def subscribe(msg, nymClientURI):
             try:
                 response = await websocket.recv()
                 parseNewEvent(response)
-            except  asyncio.IncompleteReadError as e:
+            except asyncio.IncompleteReadError as e:
                 pass
             except (WebSocketConnectionClosedException, WebSocketTimeoutException) as e:
                 print(f"websocket error: {e}")
                 continue
+            # not a good way to do, for demo it's ok
+            except:
+                await websocket.send(nym.createPayload(relay, "quit"))
+                await websocket.close()
+                break
 
-        websocket.close()
+        await websocket.close()
 
 
-def newTextNote(relay, nymClientURI, privateKey, message, tags=[]):
+def newTextNote(relay, nymClientURI, privateKey, message, tags=None):
+    if tags is None:
+        tags = []
     pk = PrivateKey(unhexlify(privateKey))
 
     msg = message
@@ -108,12 +137,11 @@ def newTextNote(relay, nymClientURI, privateKey, message, tags=[]):
     event = Event(pk.public_key.hex(), content=msg, kind=event_kind, tags=tags)
     pk.sign_event(event)
 
-    print(f"\nTry to publish event\n 📜 message: {event.content}\n 🪝 kind {event.kind}\n 📨 to {relay}")
-    asyncio.get_event_loop().run_until_complete(publish(nym.createPayload(relay, event.to_message()), nymClientURI))
+    return event
 
 
-if __name__ == '__main__':
 
+async def main():
     parser = argparse.ArgumentParser(description='Light Nostr client')
     parser.add_argument('--cmd', dest='command', type=str, help='text-note | subscribe', required=True)
 
@@ -125,31 +153,51 @@ if __name__ == '__main__':
     parser.add_argument('--limit', dest='limit', type=str, help='Subscription limit event', default=100)
     parser.add_argument('--nym-client,', dest='nymClient', type=str, help='URI of local nym-client',
                         default='ws://127.0.0.1:1977')
+
     args = parser.parse_args()
 
     command = args.command
     relay = args.relay
     nymClient = args.nymClient
 
-    if command == "text-note":
-        privateKey = args.privateKey
 
-        if privateKey is None:
-            print("\nNo private key set, will generate one: ")
-            rndPk = PrivateKey()
-            privateKey = rndPk.hex()
-            print(f"{rndPk.bech32()}")
+    try:
+        loop = asyncio.get_event_loop()
 
-        message = args.message
-        if message is None:
-            message = "This is a note published trough Nym mixnet, visit https://nymtech.net for more information"
+        if command == "text-note":
+            privateKey = args.privateKey
 
-        newTextNote(relay, nymClient, privateKey, message)
+            if privateKey is None:
+                print("\nNo private key set, will generate one: ")
+                rndPk = PrivateKey()
+                privateKey = rndPk.hex()
+                print(f"{rndPk.bech32()}")
 
-    elif command == "subscribe":
-        print(f"\n📟 Subscribe to new events using relay {relay} ")
+            message = args.message
+            if message is None:
+                message = "This is a note published trough Nym mixnet, visit https://nymtech.net for more information"
 
-        subscriptionReq = ["REQ", "RAND", {"limit": str({args.limit})}]
+            event = newTextNote(relay, nymClient, privateKey, message)
 
-        asyncio.get_event_loop().run_until_complete(
-            subscribe(nym.createPayload(relay, json.dumps(subscriptionReq)), nymClient))
+            print(f"\nTry to publish event\n 📜 message: {event.content}\n 🪝 kind {event.kind}\n 📨 to {relay}")
+            pub = loop.create_task(
+                publish(nym.createPayload(relay, event.to_message()), nymClient, relay))
+            await pub
+            
+        elif command == "subscribe":
+            print(f"\n📟 Subscribe to new events using relay {relay}")
+            subscriptionReq = ["REQ", "RAND", {"limit": str({args.limit})}]
+
+            sub = loop.create_task(
+                subscribe(nym.createPayload(relay, json.dumps(subscriptionReq)), nymClient, relay))
+            await sub
+    except KeyboardInterrupt:
+        pending_tasks = [
+            task for task in asyncio.Task.all_tasks() if not task.done()
+        ]
+        loop.run_until_complete(asyncio.gather(*pending_tasks))
+        loop.close()
+
+
+if __name__ == '__main__':
+    asyncio.run(main())
