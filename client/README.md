@@ -23,7 +23,7 @@ Requirements:
 ```bash
 git clone https://github.com/notrustverify/nostr-nym.git
 cd client
-pipenv shell
+pipenv shell && pipenv install
 ```
 
 ## Usage
