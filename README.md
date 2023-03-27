@@ -6,7 +6,7 @@ Nostr-nym is a proxy to leverage the power of [Nym](https://nymtech.net) mixnet 
 A public relay is accessible with the following nym-client id:
 `2gc9QidpXs4YGKmphinsDhWTHxdy2TZgWYWz2VenN5jL.dkwwJqS1zXa9BuPAFdniRN2HxFvAbTybAmrUHGAT5KV@2BuMSfMW3zpeAjKXyKLhmY4QW1DXurrtSPEJ6CjX3SEh`
 
-A light nostr client is available under [client](client) folder to be able to interact with a nostr hosted on the mixnet
+A light nostr client is available under [client](client) folder to be able to interact with a nostr relay hosted on the mixnet
 
 Demo
 [![asciicast](https://asciinema.org/a/569964.svg)](https://asciinema.org/a/569964)

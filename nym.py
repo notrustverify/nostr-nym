@@ -201,7 +201,7 @@ class Serve:
             self.createQueueClient(senderTag)
             print(f"Start thread")
             threading.Thread(target=nostrHandler.NostrHandler,
-                             args=(senderTag, self.clientQueues[senderTag], self.ws,),
+                             args=(senderTag, self.clientQueues[senderTag][0],self.clientQueues[senderTag][1], self.ws,),
                              daemon=True).start()
 
             print(f"Create queue for {senderTag}"
@@ -211,13 +211,16 @@ class Serve:
             self.clientQueues[senderTag].put(event)
 
     def createQueueClient(self, senderTag):
-        self.clientQueues.update({senderTag: queue.Queue()})
+        # create 2 queue, first one is nym.py to nostrHandle.py other one
+        # is for signaling when nostr client disconnect
+        self.clientQueues.update({senderTag: [queue.Queue(), queue.Queue()]})
 
     def queueCleaner(self):
         while True:
-            for client, queueClient  in self.clientQueues.items():
-                if queueClient.qsize() > 0:
+            for client, queueClient in self.clientQueues.items():
+                if queueClient[1].qsize() > 0:
                     message = queueClient.get()
+                    print(message)
 
 
 
