@@ -31,7 +31,7 @@ def getNostrPayload(received_message):
         payload = json.loads(received_message)['message'][54:]
         return json.loads(json.loads(payload))
     except (UnicodeDecodeError, json.decoder.JSONDecodeError) as e:
-        print(f"Error parsing message {received_message}, error {e}")
+        #print(f"Error parsing message {received_message}, error {e}")
         return None
 
 
@@ -209,10 +209,10 @@ async def main():
             limit = args.limit
 
             if since is not None:
-                filters = Filters([Filter(authors=[author], since=since, limit=limit)])
+                filters = Filters([Filter(authors=[author], since=since, limit=limit, kinds=[kind])])
             else:
-                filters = Filters([Filter(authors=[author], limit=limit)])
-
+                filters = Filters([Filter(authors=[author], limit=limit, kinds=[kind])])
+                
             subscription_id = uuid.uuid1().hex[:9]
             request = [ClientMessageType.REQUEST, subscription_id]
             request.extend(filters.to_json_array())
