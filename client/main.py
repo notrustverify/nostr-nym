@@ -1,9 +1,10 @@
 import asyncio
 import datetime
+import time
 import json
 import signal
 import sys
-
+import uuid
 import websockets
 from binascii import unhexlify, hexlify
 from nostr import bech32
@@ -15,6 +16,8 @@ import nym
 from nostr.key import PrivateKey
 from nostr.event import Event, EventKind
 from nostr.key import PublicKey
+from nostr.filter import Filter, Filters
+from nostr.message_type import ClientMessageType
 
 
 # From https://github.com/jeffthibault/python-nostr/blob/main/nostr/event.py
@@ -150,7 +153,11 @@ async def main():
                         help='Service provider id (nym-client id) to interact with',
                         required=True)
     parser.add_argument('--message', dest='message', type=str, help='Message content')
-    parser.add_argument('--limit', dest='limit', type=str, help='Subscription limit event', default=100)
+    parser.add_argument('--req', dest='req', type=str, help='Search term for event')
+    parser.add_argument('--limit', dest='limit', type=int, help='Subscription limit event', default=100)
+    parser.add_argument('--author', dest='author', type=str, help='Author', default="9a576bd96047d9884a93abb2bb0446092b9a1bc773a452143e7f465e538775f4")
+    parser.add_argument('--kinds', dest='kinds', type=int, help='Event kind', default=1)
+    parser.add_argument('--since', dest='since', type=str, help='since timestamp')
     parser.add_argument('--nym-client,', dest='nymClient', type=str, help='URI of local nym-client',
                         default='ws://127.0.0.1:1977')
 
@@ -186,11 +193,35 @@ async def main():
             
         elif command == "subscribe":
             print(f"\n📟 Subscribe to new events using relay {relay}")
-            subscriptionReq = ["REQ", "RAND", {"limit": str({args.limit})}]
+            filters = Filters([Filter(kinds=[EventKind.TEXT_NOTE], limit=args.limit)])
+            subscription_id = uuid.uuid1().hex[:9]
+            request = [ClientMessageType.REQUEST, subscription_id]
+            request.extend(filters.to_json_array())
 
             sub = loop.create_task(
-                subscribe(nym.createPayload(relay, json.dumps(subscriptionReq)), nymClient, relay))
+                subscribe(nym.createPayload(relay, json.dumps(request)), nymClient, relay))
             await sub
+
+        elif command == "search":
+            kinds = args.kinds
+            author = args.author
+            since = args.since
+            limit = args.limit
+
+            if since is not None:
+                filters = Filters([Filter(authors=[author], since=since, limit=limit)])
+            else:
+                filters = Filters([Filter(authors=[author], limit=limit)])
+
+            subscription_id = uuid.uuid1().hex[:9]
+            request = [ClientMessageType.REQUEST, subscription_id]
+            request.extend(filters.to_json_array())
+
+            print(f"\n📟 Search new events with {request} query using relay {relay}")
+            sub = loop.create_task(
+                subscribe(nym.createPayload(relay, json.dumps(request)), nymClient, relay))
+            await sub
+
     except KeyboardInterrupt:
         pending_tasks = [
             task for task in asyncio.Task.all_tasks() if not task.done()
