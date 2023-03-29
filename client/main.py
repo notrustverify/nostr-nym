@@ -180,7 +180,7 @@ async def main():
         loop = asyncio.get_event_loop()
 
         if command == "text-note":
-            privateKey = args.privateKey
+            privateKey = PrivateKey.from_nsec(args.privateKey).hex()
 
             if privateKey is None:
                 print("\nNo private key set, will generate one: ")
