@@ -48,7 +48,14 @@ Start the nym-client `./nym-client run --id nostr-client`
 python main.py --cmd subscribe --relay 2gc9QidpXs4YGKmphinsDhWTHxdy2TZgWYWz2VenN5jL.dkwwJqS1zXa9BuPAFdniRN2HxFvAbTybAmrUHGAT5KV@2BuMSfMW3zpeAjKXyKLhmY4QW1DXurrtSPEJ6CjX3SEh 
 ```
 
-### Post new text note
+#### Post new text note
+
+```bash
+python main.py --cmd text-note --message "Hello world (from the Nym mixnet)" --relay 2gc9QidpXs4YGKmphinsDhWTHxdy2TZgWYWz2VenN5jL.dkwwJqS1zXa9BuPAFdniRN2HxFvAbTybAmrUHGAT5KV@2BuMSfMW3zpeAjKXyKLhmY4QW1DXurrtSPEJ6CjX3SEh 
+```
+
+
+#### Search post
 
 ```bash
 python main.py --cmd text-note --message "Hello world (from the Nym mixnet)" --relay 2gc9QidpXs4YGKmphinsDhWTHxdy2TZgWYWz2VenN5jL.dkwwJqS1zXa9BuPAFdniRN2HxFvAbTybAmrUHGAT5KV@2BuMSfMW3zpeAjKXyKLhmY4QW1DXurrtSPEJ6CjX3SEh 

@@ -42,8 +42,7 @@ def parseNewEvent(received_message):
 
     try:
         if answer[0] == "EOSE":
-            print(f"\nall events received, waiting for new one")
-            return
+            return "EOSE"
         else:
             newEventData = answer[2]
     except IndexError as e:
@@ -107,14 +106,22 @@ async def publish(msg, nymClientURI, relay):
         await websocket.close()
 
 
-async def subscribe(msg, nymClientURI, relay):
+async def subscribe(msg, nymClientURI, relay, runForever=False):
     async with websockets.connect(nymClientURI) as websocket:
         await websocket.send(msg)
 
         while True:
             try:
                 response = await websocket.recv()
-                parseNewEvent(response)
+                parsedEvent = parseNewEvent(response)
+
+                if parsedEvent == "EOSE" and runForever:
+                    await websocket.send(nym.createPayload(relay, "quit"))
+                    print(f"\nall events received")
+                    break
+                elif parsedEvent == "EOSE":
+                    print(f"\nall events received, waiting for new one")
+
             except asyncio.IncompleteReadError as e:
                 pass
             except (WebSocketConnectionClosedException, WebSocketTimeoutException) as e:
@@ -127,6 +134,7 @@ async def subscribe(msg, nymClientURI, relay):
                 break
 
         await websocket.close()
+
 
 
 def newTextNote(relay, nymClientURI, privateKey, message, tags=None):
@@ -178,7 +186,7 @@ async def main():
                 print("\nNo private key set, will generate one: ")
                 rndPk = PrivateKey()
                 privateKey = rndPk.hex()
-                print(f"{rndPk.bech32()}")
+                print(f"{rndPk.bech32()}\n{rndPk.public_key.bech32()}")
 
             message = args.message
             if message is None:
@@ -192,11 +200,13 @@ async def main():
             await pub
             
         elif command == "subscribe":
-            print(f"\n📟 Subscribe to new events using relay {relay}")
+
             filters = Filters([Filter(kinds=[EventKind.TEXT_NOTE], limit=args.limit)])
             subscription_id = uuid.uuid1().hex[:9]
             request = [ClientMessageType.REQUEST, subscription_id]
             request.extend(filters.to_json_array())
+
+            print(f"\n📟 Subscribe to new events with {request} using relay {relay}")
 
             sub = loop.create_task(
                 subscribe(nym.createPayload(relay, json.dumps(request)), nymClient, relay))
@@ -204,22 +214,22 @@ async def main():
 
         elif command == "search":
             kinds = args.kinds
-            author = args.author
+            author = PublicKey.from_npub(args.author).hex()
             since = args.since
             limit = args.limit
 
             if since is not None:
-                filters = Filters([Filter(authors=[author], since=since, limit=limit, kinds=[kind])])
+                filters = Filters([Filter(authors=[author], since=since, limit=limit, kinds=[kinds])])
             else:
-                filters = Filters([Filter(authors=[author], limit=limit, kinds=[kind])])
-                
+                filters = Filters([Filter(authors=[author], kinds=[kinds], limit=limit)])
+
             subscription_id = uuid.uuid1().hex[:9]
             request = [ClientMessageType.REQUEST, subscription_id]
             request.extend(filters.to_json_array())
 
             print(f"\n📟 Search new events with {request} query using relay {relay}")
             sub = loop.create_task(
-                subscribe(nym.createPayload(relay, json.dumps(request)), nymClient, relay))
+                subscribe(nym.createPayload(relay, json.dumps(request)), nymClient, relay, runForever=True))
             await sub
 
     except KeyboardInterrupt:
