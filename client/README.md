@@ -33,14 +33,14 @@ A public relay is available at `2gc9QidpXs4YGKmphinsDhWTHxdy2TZgWYWz2VenN5jL.dkw
 
 Start the nym-client `./nym-client run --id nostr-client`
 
-| *Name* | *Default*                  | *Description*                                               |
-|--------|----------------------------|-------------------------------------------------------------|
-| `cmd`    | Mandatory `text-note` or `subscribe`                 | Select the action to, `text-note` or `subscribe`            |
-| `relay` | Mandatory                  | Relay address                                               |
-| `pk` | Generate a new private key | Private key used to sign the event, should be in hex format |
-| `message`  | `This is a note published trough Nym mixnet, visit https://nymtech.net for more information` | Message to send on the note |
-| `nym-client` | `ws://127.0.0.1:1977`      | nym-client to use on the client |
-| `limit` | `100` | Number of filter to filter |
+| *Name* | *Default*                  | *Description*                                                |
+|--------|----------------------------|--------------------------------------------------------------|
+| `cmd`    | Mandatory `text-note` or `subscribe`                 | Select the action to, `text-note` or `subscribe`             |
+| `relay` | Mandatory                  | Relay address                                                |
+| `pk` | Generate a new private key | Private key used to sign the event, should be in nsec format |
+| `message`  | `This is a note published trough Nym mixnet, visit https://nymtech.net for more information` | Message to send on the note                                  |
+| `nym-client` | `ws://127.0.0.1:1977`      | nym-client to use on the client                              |
+| `limit` | `100` | Number of filter to filter                                   |
 
 #### Subscribe to events
 
