@@ -16,6 +16,9 @@ Requirements:
 # init the nym-client
 ./nym-client init --id nostr-client
 
+# start the nym-client
+./nym-client run --id nostr-client
+
 ```
 
 ### Nostr client
@@ -70,9 +73,9 @@ python main.py --cmd text-note --message "Hello world (from the Nym mixnet)" --r
 
 | *Name* | *Default*                  | *Description*                                                |
 |--------|----------------------------|--------------------------------------------------------------|
-| `kind`  | All | Event kind to filter, separate by `,` |
-| `author` | Empty | Public key posted event to filter, npub format, separate by `,` |
-| `since` | All | Since event to filter, epoch format |
+| `kind`  | `1` | Event kind to filter, separate by `,` |
+| `author` | `npub1nftkhktqglvcsj5n4wetkpzxpy4e5x78wwj9y9p70ar9u5u8wh6qsxmzqs` | Public key posted event to filter, npub format, separate by `,` |
+| `since` | `None` | Since event to filter, epoch format |
 
 ```bash
 python main.py --cmd filter --author npub1nftkhktqglvcsj5n4wetkpzxpy4e5x78wwj9y9p70ar9u5u8wh6qsxmzqs --relay 2gc9QidpXs4YGKmphinsDhWTHxdy2TZgWYWz2VenN5jL.dkwwJqS1zXa9BuPAFdniRN2HxFvAbTybAmrUHGAT5KV@2BuMSfMW3zpeAjKXyKLhmY4QW1DXurrtSPEJ6CjX3SEh 
