@@ -101,7 +101,7 @@ async def publish(msg, nymClientURI, relay):
         msg = await websocket.recv()
         parseNymMessage(msg)
 
-        await websocket.send(nym.createPayload(relay, "quit"))
+        await websocket.send(nym.Serve.createPayload(relay, "quit", padding=False))
 
         await websocket.close()
 
@@ -116,7 +116,7 @@ async def subscribe(msg, nymClientURI, relay, runForever=False):
                 parsedEvent = parseNewEvent(response)
 
                 if parsedEvent == "EOSE" and runForever:
-                    await websocket.send(nym.createPayload(relay, "quit"))
+                    await websocket.send(nym.Serve.createPayload(relay, "quit", padding=False))
                     print(f"\nall events received")
                     break
                 elif parsedEvent == "EOSE":
@@ -129,7 +129,7 @@ async def subscribe(msg, nymClientURI, relay, runForever=False):
                 continue
             # not a good way to do, for demo it's ok
             except:
-                await websocket.send(nym.createPayload(relay, "quit"))
+                await websocket.send(nym.Serve.createPayload(relay, "quit", padding=False))
                 await websocket.close()
                 break
 
@@ -180,13 +180,15 @@ async def main():
         loop = asyncio.get_event_loop()
 
         if command == "text-note":
-            privateKey = PrivateKey.from_nsec(args.privateKey).hex()
 
+            privateKey = args.privateKey
             if privateKey is None:
                 print("\nNo private key set, will generate one: ")
                 rndPk = PrivateKey()
                 privateKey = rndPk.hex()
                 print(f"{rndPk.bech32()}\n{rndPk.public_key.bech32()}")
+            else:
+                privateKey = PrivateKey.from_nsec(privateKey).hex()
 
             message = args.message
             if message is None:
@@ -196,7 +198,7 @@ async def main():
 
             print(f"\nTry to publish event\n 📜 message: {event.content}\n 🪝 kind {event.kind}\n 📨 to {relay}")
             pub = loop.create_task(
-                publish(nym.createPayload(relay, event.to_message()), nymClient, relay))
+                publish(nym.Serve.createPayload(relay, event.to_message(), padding=False), nymClient, relay))
             await pub
             
         elif command == "subscribe":
@@ -209,7 +211,7 @@ async def main():
             print(f"\n📟 Subscribe to new events with {request} using relay {relay}")
 
             sub = loop.create_task(
-                subscribe(nym.createPayload(relay, json.dumps(request)), nymClient, relay))
+                subscribe(nym.Serve.createPayload(relay, json.dumps(request), padding=False), nymClient, relay))
             await sub
 
         elif command == "search":
@@ -229,7 +231,7 @@ async def main():
 
             print(f"\n📟 Search new events with {request} query using relay {relay}")
             sub = loop.create_task(
-                subscribe(nym.createPayload(relay, json.dumps(request)), nymClient, relay, runForever=True))
+                subscribe(nym.Serve.createPayload(relay, json.dumps(request), padding=False), nymClient, relay, runForever=True))
             await sub
 
     except KeyboardInterrupt:
