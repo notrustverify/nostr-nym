@@ -61,7 +61,6 @@ class Serve:
             dataToSend.update({'senderTag': senderTag})
         elif recipient is not None:
             dataToSend.update({'recipient': recipient})
-            print(dataToSend)
 
         return json.dumps(dataToSend)
 
@@ -167,9 +166,7 @@ class Serve:
                 print("bin data received. Don't know what to do")
                 return
             else:
-                print(message)
                 received_data = received_message['message']
-                print(received_data)
 
             senderTag = received_message.get('senderTag', None)
 
@@ -182,7 +179,6 @@ class Serve:
                 print(f"-> Got {received_message}")
             else:
                 print(f"-> Got message from {senderTag}")
-
 
             # spwan a new thread or put the event in the queue
             self.manageClient(senderTag, received_data)

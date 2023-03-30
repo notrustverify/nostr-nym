@@ -1,4 +1,5 @@
 import json
+import sys
 import threading
 import traceback
 import utils
@@ -89,8 +90,13 @@ class NostrHandler:
         try:
             self.nymWsHandler.send(NostrHandler.createPayload(None, "ok", self.senderTag))
             self.wsNostr.close()
+            sys.exit()
+        except SystemExit:
+            pass
         except:
             print(f"Error closing ws for {self.senderTag}")
+            traceback.print_exc()
+
 
     def on_error(self, ws, message):
         try:
