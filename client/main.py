@@ -154,16 +154,17 @@ def newTextNote(relay, nymClientURI, privateKey, message, tags=None):
 
 async def main():
     parser = argparse.ArgumentParser(description='Light Nostr client')
-    parser.add_argument('--cmd', dest='command', type=str, help='text-note | subscribe', required=True)
+    parser.add_argument('--cmd', dest='command', type=str, help='text-note | subscribe | filter', required=True)
 
     parser.add_argument('--pk', dest='privateKey', type=str, help='Private key in hex to sign message')
     parser.add_argument('--relay', dest='relay', type=str,
                         help='Service provider id (nym-client id) to interact with',
                         required=True)
+    
     parser.add_argument('--message', dest='message', type=str, help='Message content')
     parser.add_argument('--req', dest='req', type=str, help='Search term for event')
     parser.add_argument('--limit', dest='limit', type=int, help='Subscription limit event', default=100)
-    parser.add_argument('--author', dest='author', type=str, help='Author', default="9a576bd96047d9884a93abb2bb0446092b9a1bc773a452143e7f465e538775f4")
+    parser.add_argument('--author', dest='author', type=str, help='Author', default="npub1nftkhktqglvcsj5n4wetkpzxpy4e5x78wwj9y9p70ar9u5u8wh6qsxmzqs")
     parser.add_argument('--kinds', dest='kinds', type=int, help='Event kind', default=1)
     parser.add_argument('--since', dest='since', type=str, help='since timestamp')
     parser.add_argument('--nym-client,', dest='nymClient', type=str, help='URI of local nym-client',
@@ -212,7 +213,7 @@ async def main():
                 subscribe(nym.createPayload(relay, json.dumps(request)), nymClient, relay))
             await sub
 
-        elif command == "search":
+        elif command == "filter":
             kinds = args.kinds
             author = PublicKey.from_npub(args.author).hex()
             since = args.since
@@ -227,7 +228,7 @@ async def main():
             request = [ClientMessageType.REQUEST, subscription_id]
             request.extend(filters.to_json_array())
 
-            print(f"\n📟 Search new events with {request} query using relay {relay}")
+            print(f"\n📟 Filter existing events with {request} query using relay {relay}")
             sub = loop.create_task(
                 subscribe(nym.createPayload(relay, json.dumps(request)), nymClient, relay, runForever=True))
             await sub
