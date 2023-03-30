@@ -28,10 +28,10 @@ def note_id(noteHexId):
 
 def getNostrPayload(received_message):
     try:
-        payload = json.loads(received_message)['message'][54:]
-        return json.loads(json.loads(payload))
+        payload = json.loads(received_message)['message']
+        return json.loads(payload)
     except (UnicodeDecodeError, json.decoder.JSONDecodeError) as e:
-        #print(f"Error parsing message {received_message}, error {e}")
+        print(f"Error parsing message {received_message}, error {e}")
         return None
 
 

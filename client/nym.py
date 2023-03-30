@@ -28,34 +28,6 @@ TOTAL_HEADERS_PAD_SIZE = len(HEADER_APPLICATION_JSON) + len(NYM_HEADER_SIZE_TEXT
     HEADER_APPLICATION_JSON_BYTE) + 1
 
 
-
-def createPayload(recipient, reply_message, senderTag=None, is_text=True, padding=True):
-        messageToSend = ""
-        if is_text and padding:
-            headers = HEADER_APPLICATION_JSON
-            padding = (NYM_KIND_TEXT + NYM_HEADER_SIZE_TEXT + HEADER_APPLICATION_JSON_BYTE).decode('utf-8')
-            messageToSend = padding + headers + json.dumps(reply_message)
-        elif not padding:
-            messageToSend = reply_message
-        else:
-            # not used now, to investigate later
-            padding = (NYM_KIND_BINARY + NYM_HEADER_BINARY).decode('utf-8')
-
-        dataToSend = {
-            "type": "sendAnonymous",
-            # append \x00 because of "kind" message is non binary and equal 0 + 1 bytes because no header are set
-            # "message": ,
-            "message": messageToSend,
-            "replySurbs": 100
-        }
-
-        if senderTag is not None:
-            dataToSend.update({'senderTag': senderTag})
-        elif recipient is not None:
-            dataToSend.update({'recipient': recipient})
-
-        return json.dumps(dataToSend)
-
 class Serve:
 
     @staticmethod

@@ -23,13 +23,13 @@ TOTAL_HEADERS_PAD_SIZE = len(HEADER_APPLICATION_JSON) + len(NYM_HEADER_SIZE_TEXT
 class NostrHandler:
 
     @staticmethod
-    def createPayload(recipient, reply_message, senderTag=None, is_text=True, nopadding=False):
+    def createPayload(recipient, reply_message, senderTag=None, is_text=True, padding=False):
         messageToSend = ""
-        if is_text:
+        if is_text and padding:
             headers = HEADER_APPLICATION_JSON
             padding = (NYM_KIND_TEXT + NYM_HEADER_SIZE_TEXT + HEADER_APPLICATION_JSON_BYTE).decode('utf-8')
             messageToSend = padding + headers + json.dumps(reply_message)
-        elif nopadding:
+        elif not padding:
             messageToSend = reply_message
         else:
             # not used now, to investigate later
@@ -50,7 +50,7 @@ class NostrHandler:
 
         return json.dumps(dataToSend)
 
-    def __init__(self, senderTag, eventQueue, nymWsHandler):
+    def __init__(self, senderTag, eventQueue, nymWsHandler, padding=True):
         self.firstRun = True
 
         self.eventQueue = eventQueue
@@ -58,6 +58,7 @@ class NostrHandler:
         self.senderTag = senderTag
         self.wsReady = False
         self.nymWsHandler = nymWsHandler
+        self.padding = padding
 
         self.url = f"{utils.NOSTR_RELAY_URI_PORT}"
         websocketNostr.enableTrace(False)
@@ -82,13 +83,13 @@ class NostrHandler:
         if utils.DEBUG:
             print(message)
 
-        self.nymWsHandler.send(NostrHandler.createPayload(None, message, self.senderTag))
+        self.nymWsHandler.send(NostrHandler.createPayload(None, message, self.senderTag, padding=self.padding))
 
     def on_close(self, ws, close_status_code, close_msg):
         print(f"Connection with {self.senderTag} closed")
 
         try:
-            self.nymWsHandler.send(NostrHandler.createPayload(None, "ok", self.senderTag))
+            self.nymWsHandler.send(NostrHandler.createPayload(None, "ok", self.senderTag, padding=self.padding))
             self.wsNostr.close()
             sys.exit()
         except SystemExit:

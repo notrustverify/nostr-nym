@@ -209,7 +209,7 @@ class Serve:
             self.createQueueClient(senderTag)
             print(f"Start thread")
             threading.Thread(target=nostrHandler.NostrHandler,
-                             args=(senderTag, self.clientQueues[senderTag], self.ws,),
+                             args=(senderTag, self.clientQueues[senderTag], self.ws, self.padding, ),
                              daemon=True).start()
 
             print(f"Create queue for {senderTag}"
