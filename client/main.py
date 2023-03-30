@@ -45,6 +45,7 @@ def parseNewEvent(received_message):
             return "EOSE"
         else:
             newEventData = answer[2]
+
     except IndexError as e:
         print(f"Error parsing message {answer}, error {e}")
         return
@@ -181,13 +182,16 @@ async def main():
         loop = asyncio.get_event_loop()
 
         if command == "text-note":
-            privateKey = PrivateKey.from_nsec(args.privateKey).hex()
+            privateKey = args.privateKey
 
             if privateKey is None:
                 print("\nNo private key set, will generate one: ")
                 rndPk = PrivateKey()
                 privateKey = rndPk.hex()
                 print(f"{rndPk.bech32()}\n{rndPk.public_key.bech32()}")
+            else:
+                privateKey = PrivateKey.from_nsec(args.privateKey).hex()
+
 
             message = args.message
             if message is None:
