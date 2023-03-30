@@ -31,7 +31,7 @@ def getNostrPayload(received_message):
         payload = json.loads(received_message)['message']
         return json.loads(payload)
     except (UnicodeDecodeError, json.decoder.JSONDecodeError) as e:
-        print(f"Error parsing message {received_message}, error {e}")
+        #print(f"Error parsing message {received_message}, error {e}")
         return None
 
 
