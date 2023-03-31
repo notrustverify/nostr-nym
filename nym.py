@@ -216,7 +216,7 @@ class Serve:
                              daemon=True).start()
 
             print(f"Create queue for {senderTag}"
-                  f"\nActual number of client: {len(self.clientQueues)}"
+                  f"\nActual number of client: {len(self.clientQueues.keys())}"
                   f"\nNumber of thread: {threading.active_count()}")
 
             self.clientQueues[senderTag].put(event)
