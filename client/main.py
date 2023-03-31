@@ -31,7 +31,8 @@ def getNostrPayload(received_message):
         payload = json.loads(received_message)['message']
         return json.loads(payload)
     except (UnicodeDecodeError, json.decoder.JSONDecodeError) as e:
-        #print(f"Error parsing message {received_message}, error {e}")
+        if DEBUG:
+            print(f"Error parsing message {received_message}, error {e}")
         return None
 
 
@@ -46,8 +47,9 @@ def parseNewEvent(received_message):
         else:
             newEventData = answer[2]
     except IndexError as e:
-        print(f"Error parsing message {answer}, error {e}")
-        return
+        if DEBUG:
+            print(f"Error parsing message {answer}, error {e}")
+        return None
 
     noteid = newEventData['id']
     fromPub = newEventData['pubkey']
@@ -68,11 +70,15 @@ def parseNewEvent(received_message):
 
 def parseNymMessage(received_message):
     answer = getNostrPayload(received_message)
+
     if answer is not None:
         if answer[0] == "OK":
             print(f"\n✅ Note successfully published with id {note_id(answer[1])}")
         else:
             print(f"Error with note: {answer}")
+            return False
+
+        return True
 
 
 async def signalingMsg(msg, nymClientURI, waitForAnswer=False):
@@ -99,9 +105,19 @@ async def publish(msg, nymClientURI, relay):
         await websocket.send(msg)
 
         msg = await websocket.recv()
-        parseNymMessage(msg)
+        parsed = parseNymMessage(msg)
+
+        # if a nym-client stop and message have been send, the not received message are going to be send when it connect
+        if not parsed:
+            msg = await websocket.recv()
+            parseNymMessage(msg)
 
         await websocket.send(nym.Serve.createPayload(relay, "quit", padding=False))
+
+        try:
+            await asyncio.wait_for(websocket.recv(), timeout=2)
+        except asyncio.exceptions.TimeoutError:
+            pass
 
         await websocket.close()
 
@@ -130,14 +146,19 @@ async def subscribe(msg, nymClientURI, relay, runForever=False):
             # not a good way to do, for demo it's ok
             except:
                 await websocket.send(nym.Serve.createPayload(relay, "quit", padding=False))
+
+                try:
+                    await asyncio.wait_for(websocket.recv(), timeout=2)
+                except asyncio.exceptions.TimeoutError:
+                    pass
+                
                 await websocket.close()
                 break
 
         await websocket.close()
 
 
-
-def newTextNote(relay, nymClientURI, privateKey, message, tags=None):
+def newTextNote(privateKey, message, tags=None):
     if tags is None:
         tags = []
     pk = PrivateKey(unhexlify(privateKey))
@@ -151,7 +172,6 @@ def newTextNote(relay, nymClientURI, privateKey, message, tags=None):
     return event
 
 
-
 async def main():
     parser = argparse.ArgumentParser(description='Light Nostr client')
     parser.add_argument('--cmd', dest='command', type=str, help='text-note | subscribe', required=True)
@@ -163,18 +183,21 @@ async def main():
     parser.add_argument('--message', dest='message', type=str, help='Message content')
     parser.add_argument('--req', dest='req', type=str, help='Search term for event')
     parser.add_argument('--limit', dest='limit', type=int, help='Subscription limit event', default=100)
-    parser.add_argument('--author', dest='author', type=str, help='Author', default="9a576bd96047d9884a93abb2bb0446092b9a1bc773a452143e7f465e538775f4")
+    parser.add_argument('--author', dest='author', type=str, help='Author',
+                        default="9a576bd96047d9884a93abb2bb0446092b9a1bc773a452143e7f465e538775f4")
     parser.add_argument('--kinds', dest='kinds', type=int, help='Event kind', default=1)
     parser.add_argument('--since', dest='since', type=str, help='since timestamp')
     parser.add_argument('--nym-client,', dest='nymClient', type=str, help='URI of local nym-client',
                         default='ws://127.0.0.1:1977')
+    parser.add_argument('--debug', dest="debug", type=bool, help="Debug enabled", default=False)
 
     args = parser.parse_args()
 
+    global DEBUG
+    DEBUG = args.debug
     command = args.command
     relay = args.relay
     nymClient = args.nymClient
-
 
     try:
         loop = asyncio.get_event_loop()
@@ -194,13 +217,13 @@ async def main():
             if message is None:
                 message = "This is a note published trough Nym mixnet, visit https://nymtech.net for more information"
 
-            event = newTextNote(relay, nymClient, privateKey, message)
+            event = newTextNote(privateKey, message)
 
             print(f"\nTry to publish event\n 📜 message: {event.content}\n 🪝 kind {event.kind}\n 📨 to {relay}")
             pub = loop.create_task(
                 publish(nym.Serve.createPayload(relay, event.to_message(), padding=False), nymClient, relay))
             await pub
-            
+
         elif command == "subscribe":
 
             filters = Filters([Filter(kinds=[EventKind.TEXT_NOTE], limit=args.limit)])
@@ -231,7 +254,8 @@ async def main():
 
             print(f"\n📟 Search new events with {request} query using relay {relay}")
             sub = loop.create_task(
-                subscribe(nym.Serve.createPayload(relay, json.dumps(request), padding=False), nymClient, relay, runForever=True))
+                subscribe(nym.Serve.createPayload(relay, json.dumps(request), padding=False), nymClient, relay,
+                          runForever=True))
             await sub
 
     except KeyboardInterrupt:
