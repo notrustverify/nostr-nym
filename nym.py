@@ -145,12 +145,15 @@ class Serve:
             print(f"Unicode error, nothing to do about: {e}")
             return
 
-        try:
-            kindReceived = bytes(received_message['message'][0:8], 'utf-8')[0:1]
-        except IndexError as e:
-            print(f"Error getting message kind, {e}")
-            #traceback.print_exc()
-            return
+        if self.padding:
+            try:
+                kindReceived = bytes(received_message['message'][0:8], 'utf-8')[0:1]
+            except IndexError as e:
+                print(f"Error getting message kind, {e}")
+                #traceback.print_exc()
+                return
+        else:
+            kindReceived = ""
 
         # we received the data in a json
         try:

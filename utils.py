@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-DEBUG = True
+DEBUG = os.getenv("DEBUG", False)
 
 NYM_CLIENT_URI = os.getenv("NYM_CLIENT_URI", 'ws://127.0.0.1:1977')
 

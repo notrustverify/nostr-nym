@@ -123,6 +123,6 @@ class NostrHandler:
 
             if msg == "quit":
                 self.wsNostr.close()
-                return
+                sys.exit()
 
             self.wsNostr.send(msg)
