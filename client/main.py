@@ -75,11 +75,12 @@ def parseNymMessage(received_message):
     if answer is not None:
         if answer[0] == "OK":
             print(f"\n✅ Note successfully published with id {note_id(answer[1])}")
+            return True
         else:
             print(f"Error with note: {answer}")
-            return False
+            return True
+    return False
 
-        return True
 
 
 async def signalingMsg(msg, nymClientURI, waitForAnswer=False):
@@ -105,19 +106,19 @@ async def publish(msg, nymClientURI, relay):
     async with websockets.connect(nymClientURI) as websocket:
         await websocket.send(msg)
 
-        try:
-            msg = await asyncio.wait_for(websocket.recv(), timeout=20)
-            parsed = parseNymMessage(msg)
-        except asyncio.exceptions.TimeoutError:
-            print(f"Timeout")
-
-        # if a nym-client stop and message have been send, the not received message are going to be send when it connect
-        if not parsed:
+        # if nym-client close and some message was received, it's possible that there's some message send,
+        # so using this quick and dirty loop to clean the messages
+        while True:
             try:
-                msg = await asyncio.wait_for(websocket.recv(), timeout=20)
-                parseNymMessage(msg)
+                msg = await asyncio.wait_for(websocket.recv(), timeout=45)
+                if parseNymMessage(msg):
+                    break
+                if DEBUG:
+                    print(f"message left in ws: {msg}")
+
             except asyncio.exceptions.TimeoutError:
                 print(f"Timeout")
+                break
 
         await websocket.send(nym.Serve.createPayload(relay, "quit", padding=False))
 
