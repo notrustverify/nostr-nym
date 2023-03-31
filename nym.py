@@ -38,13 +38,13 @@ TOTAL_HEADERS_PAD_SIZE = len(HEADER_APPLICATION_JSON) + len(NYM_HEADER_SIZE_TEXT
 class Serve:
 
     @staticmethod
-    def createPayload(recipient, reply_message, senderTag=None, is_text=True, nopadding=False):
+    def createPayload(recipient, reply_message, senderTag=None, is_text=True, padding=True):
         messageToSend = ""
-        if is_text:
+        if is_text and padding:
             headers = HEADER_APPLICATION_JSON
             padding = (NYM_KIND_TEXT + NYM_HEADER_SIZE_TEXT + HEADER_APPLICATION_JSON_BYTE).decode('utf-8')
             messageToSend = padding + headers + json.dumps(reply_message)
-        elif nopadding:
+        elif padding:
             messageToSend = reply_message
         else:
             # not used now, to investigate later
@@ -61,7 +61,6 @@ class Serve:
             dataToSend.update({'senderTag': senderTag})
         elif recipient is not None:
             dataToSend.update({'recipient': recipient})
-            print(dataToSend)
 
         return json.dumps(dataToSend)
 
@@ -70,6 +69,8 @@ class Serve:
         self.firstRun = True
         self.clientQueues = {}
         self.url = url
+        self.padding = False
+
         websocket.enableTrace(False)
 
         self.ws = websocket.WebSocketApp(self.url,
@@ -148,13 +149,16 @@ class Serve:
             kindReceived = bytes(received_message['message'][0:8], 'utf-8')[0:1]
         except IndexError as e:
             print(f"Error getting message kind, {e}")
-            traceback.print_exc()
+            #traceback.print_exc()
             return
 
         # we received the data in a json
         try:
             # received data with padding, start at the 54th bytes
-            payload = received_message['message'][TOTAL_HEADERS_PAD_SIZE:]
+            if self.padding:
+                payload = received_message['message'][TOTAL_HEADERS_PAD_SIZE:]
+            else:
+                payload = received_message['message']
 
             if kindReceived == NYM_KIND_TEXT:
                 received_data = json.loads(payload)
@@ -162,10 +166,7 @@ class Serve:
                 print("bin data received. Don't know what to do")
                 return
             else:
-                print(message)
-                print("no message kind received. Don't know what to do")
                 received_data = received_message['message']
-                print(received_data)
 
             senderTag = received_message.get('senderTag', None)
 
@@ -179,7 +180,6 @@ class Serve:
             else:
                 print(f"-> Got message from {senderTag}")
 
-
             # spwan a new thread or put the event in the queue
             self.manageClient(senderTag, received_data)
 
@@ -189,7 +189,7 @@ class Serve:
             if recipient is not None or senderTag is not None:
                 err_msg = f"Error parsing message: {e}"
                 reply_message = err_msg
-                self.ws.send(Serve.createPayload(recipient, reply_message, senderTag))
+                self.ws.send(Serve.createPayload(recipient, reply_message, senderTag, padding=self.padding))
                 print(f"send error message, data received {message}")
                 return
             else:
@@ -209,7 +209,7 @@ class Serve:
             self.createQueueClient(senderTag)
             print(f"Start thread")
             threading.Thread(target=nostrHandler.NostrHandler,
-                             args=(senderTag, self.clientQueues[senderTag], self.ws,),
+                             args=(senderTag, self.clientQueues[senderTag], self.ws, self.padding, ),
                              daemon=True).start()
 
             print(f"Create queue for {senderTag}"

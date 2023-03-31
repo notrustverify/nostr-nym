@@ -28,10 +28,11 @@ def note_id(noteHexId):
 
 def getNostrPayload(received_message):
     try:
-        payload = json.loads(received_message)['message'][54:]
-        return json.loads(json.loads(payload))
+        payload = json.loads(received_message)['message']
+        return json.loads(payload)
     except (UnicodeDecodeError, json.decoder.JSONDecodeError) as e:
-        #print(f"Error parsing message {received_message}, error {e}")
+        if DEBUG:
+            print(f"Error parsing message {received_message}, error {e}")
         return None
 
 
@@ -47,8 +48,9 @@ def parseNewEvent(received_message):
             newEventData = answer[2]
 
     except IndexError as e:
-        print(f"Error parsing message {answer}, error {e}")
-        return
+        if DEBUG:
+            print(f"Error parsing message {answer}, error {e}")
+        return None
 
     noteid = newEventData['id']
     fromPub = newEventData['pubkey']
@@ -69,11 +71,15 @@ def parseNewEvent(received_message):
 
 def parseNymMessage(received_message):
     answer = getNostrPayload(received_message)
+
     if answer is not None:
         if answer[0] == "OK":
             print(f"\n✅ Note successfully published with id {note_id(answer[1])}")
         else:
             print(f"Error with note: {answer}")
+            return False
+
+        return True
 
 
 async def signalingMsg(msg, nymClientURI, waitForAnswer=False):
@@ -100,9 +106,19 @@ async def publish(msg, nymClientURI, relay):
         await websocket.send(msg)
 
         msg = await websocket.recv()
-        parseNymMessage(msg)
+        parsed = parseNymMessage(msg)
 
-        await websocket.send(nym.createPayload(relay, "quit"))
+        # if a nym-client stop and message have been send, the not received message are going to be send when it connect
+        if not parsed:
+            msg = await websocket.recv()
+            parseNymMessage(msg)
+
+        await websocket.send(nym.Serve.createPayload(relay, "quit", padding=False))
+
+        try:
+            await asyncio.wait_for(websocket.recv(), timeout=2)
+        except asyncio.exceptions.TimeoutError:
+            pass
 
         await websocket.close()
 
@@ -117,7 +133,7 @@ async def subscribe(msg, nymClientURI, relay, runForever=False):
                 parsedEvent = parseNewEvent(response)
 
                 if parsedEvent == "EOSE" and runForever:
-                    await websocket.send(nym.createPayload(relay, "quit"))
+                    await websocket.send(nym.Serve.createPayload(relay, "quit", padding=False))
                     print(f"\nall events received")
                     break
                 elif parsedEvent == "EOSE":
@@ -130,15 +146,20 @@ async def subscribe(msg, nymClientURI, relay, runForever=False):
                 continue
             # not a good way to do, for demo it's ok
             except:
-                await websocket.send(nym.createPayload(relay, "quit"))
+                await websocket.send(nym.Serve.createPayload(relay, "quit", padding=False))
+
+                try:
+                    await asyncio.wait_for(websocket.recv(), timeout=2)
+                except asyncio.exceptions.TimeoutError:
+                    pass
+                
                 await websocket.close()
                 break
 
         await websocket.close()
 
 
-
-def newTextNote(relay, nymClientURI, privateKey, message, tags=None):
+def newTextNote(privateKey, message, tags=None):
     if tags is None:
         tags = []
     pk = PrivateKey(unhexlify(privateKey))
@@ -150,7 +171,6 @@ def newTextNote(relay, nymClientURI, privateKey, message, tags=None):
     pk.sign_event(event)
 
     return event
-
 
 
 async def main():
@@ -170,40 +190,41 @@ async def main():
     parser.add_argument('--since', dest='since', type=str, help='since timestamp')
     parser.add_argument('--nym-client,', dest='nymClient', type=str, help='URI of local nym-client',
                         default='ws://127.0.0.1:1977')
+    parser.add_argument('--debug', dest="debug", type=bool, help="Debug enabled", default=False)
 
     args = parser.parse_args()
 
+    global DEBUG
+    DEBUG = args.debug
     command = args.command
     relay = args.relay
     nymClient = args.nymClient
-
 
     try:
         loop = asyncio.get_event_loop()
 
         if command == "text-note":
-            privateKey = args.privateKey
 
+            privateKey = args.privateKey
             if privateKey is None:
                 print("\nNo private key set, will generate one: ")
                 rndPk = PrivateKey()
                 privateKey = rndPk.hex()
                 print(f"{rndPk.bech32()}\n{rndPk.public_key.bech32()}")
             else:
-                privateKey = PrivateKey.from_nsec(args.privateKey).hex()
-
+                privateKey = PrivateKey.from_nsec(privateKey).hex()
 
             message = args.message
             if message is None:
                 message = "This is a note published trough Nym mixnet, visit https://nymtech.net for more information"
 
-            event = newTextNote(relay, nymClient, privateKey, message)
+            event = newTextNote(privateKey, message)
 
             print(f"\nTry to publish event\n 📜 message: {event.content}\n 🪝 kind {event.kind}\n 📨 to {relay}")
             pub = loop.create_task(
-                publish(nym.createPayload(relay, event.to_message()), nymClient, relay))
+                publish(nym.Serve.createPayload(relay, event.to_message(), padding=False), nymClient, relay))
             await pub
-            
+
         elif command == "subscribe":
 
             filters = Filters([Filter(kinds=[EventKind.TEXT_NOTE], limit=args.limit)])
@@ -214,7 +235,7 @@ async def main():
             print(f"\n📟 Subscribe to new events with {request} using relay {relay}")
 
             sub = loop.create_task(
-                subscribe(nym.createPayload(relay, json.dumps(request)), nymClient, relay))
+                subscribe(nym.Serve.createPayload(relay, json.dumps(request), padding=False), nymClient, relay))
             await sub
 
         elif command == "filter":
@@ -234,7 +255,8 @@ async def main():
 
             print(f"\n📟 Filter existing events with {request} query using relay {relay}")
             sub = loop.create_task(
-                subscribe(nym.createPayload(relay, json.dumps(request)), nymClient, relay, runForever=True))
+                subscribe(nym.Serve.createPayload(relay, json.dumps(request), padding=False), nymClient, relay,
+                          runForever=True))
             await sub
 
     except KeyboardInterrupt:
