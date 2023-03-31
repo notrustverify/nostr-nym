@@ -105,13 +105,19 @@ async def publish(msg, nymClientURI, relay):
     async with websockets.connect(nymClientURI) as websocket:
         await websocket.send(msg)
 
-        msg = await websocket.recv()
-        parsed = parseNymMessage(msg)
+        try:
+            msg = await asyncio.wait_for(websocket.recv(), timeout=20)
+            parsed = parseNymMessage(msg)
+        except asyncio.exceptions.TimeoutError:
+            print(f"Timeout")
 
         # if a nym-client stop and message have been send, the not received message are going to be send when it connect
         if not parsed:
-            msg = await websocket.recv()
-            parseNymMessage(msg)
+            try:
+                msg = await asyncio.wait_for(websocket.recv(), timeout=20)
+                parseNymMessage(msg)
+            except asyncio.exceptions.TimeoutError:
+                print(f"Timeout")
 
         await websocket.send(nym.Serve.createPayload(relay, "quit", padding=False))
 
@@ -119,8 +125,8 @@ async def publish(msg, nymClientURI, relay):
             await asyncio.wait_for(websocket.recv(), timeout=2)
         except asyncio.exceptions.TimeoutError:
             pass
-
-        await websocket.close()
+        finally:
+            await websocket.close()
 
 
 async def subscribe(msg, nymClientURI, relay, runForever=False):
