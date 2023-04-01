@@ -76,7 +76,14 @@ python main.py --cmd text-note --message "Hello world (from the Nym mixnet)" --r
 | `kind`  | `1` | Event kind to filter, separate by `,` |
 | `author` | `npub1nftkhktqglvcsj5n4wetkpzxpy4e5x78wwj9y9p70ar9u5u8wh6qsxmzqs` | Public key posted event to filter, npub format, separate by `,` |
 | `since` | `None` | Since event to filter, epoch format |
+| `raw` | `None` | Raw event request filter, [nostreq](https://github.com/blakejakopovic/nostreq) is a good tool |
 
 ```bash
 python main.py --cmd filter --author npub1nftkhktqglvcsj5n4wetkpzxpy4e5x78wwj9y9p70ar9u5u8wh6qsxmzqs --relay 2gc9QidpXs4YGKmphinsDhWTHxdy2TZgWYWz2VenN5jL.dkwwJqS1zXa9BuPAFdniRN2HxFvAbTybAmrUHGAT5KV@2BuMSfMW3zpeAjKXyKLhmY4QW1DXurrtSPEJ6CjX3SEh 
+```
+
+##### Raw event
+
+```bash
+python main.py --cmd filter --raw '["REQ", "ec3e6238-5ef3-4162-899c-a58e882e586a", {"kinds":[1,2]}]' --relay 2gc9QidpXs4YGKmphinsDhWTHxdy2TZgWYWz2VenN5jL.dkwwJqS1zXa9BuPAFdniRN2HxFvAbTybAmrUHGAT5KV@2BuMSfMW3zpeAjKXyKLhmY4QW1DXurrtSPEJ6CjX3SEh
 ```

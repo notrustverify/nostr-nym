@@ -44,6 +44,8 @@ def parseNewEvent(received_message):
     try:
         if answer[0] == "EOSE":
             return "EOSE"
+        elif answer[0] == "NOTICE":
+            return answer
         else:
             newEventData = answer[2]
 
@@ -139,12 +141,18 @@ async def subscribe(msg, nymClientURI, relay, runForever=False):
                 response = await websocket.recv()
                 parsedEvent = parseNewEvent(response)
 
-                if parsedEvent == "EOSE" and runForever:
-                    await websocket.send(nym.Serve.createPayload(relay, "quit", padding=False))
-                    print(f"\nall events received")
-                    break
-                elif parsedEvent == "EOSE":
-                    print(f"\nall events received, waiting for new one")
+                try:
+                    if parsedEvent == "EOSE" and runForever:
+                        await websocket.send(nym.Serve.createPayload(relay, "quit", padding=False))
+                        print(f"\nall events received")
+                        break
+                    elif parsedEvent == "EOSE":
+                        print(f"\nall events received, waiting for new one")
+                    elif type(parsedEvent) == list and parsedEvent[0] == "NOTICE":
+                        print(f"\n{parsedEvent[0]} - {parsedEvent[1]}")
+                        break
+                except IndexError:
+                    continue
 
             except asyncio.IncompleteReadError as e:
                 pass
@@ -195,6 +203,7 @@ async def main():
     parser.add_argument('--author', dest='author', type=str, help='Author', default="npub1nftkhktqglvcsj5n4wetkpzxpy4e5x78wwj9y9p70ar9u5u8wh6qsxmzqs")
     parser.add_argument('--kinds', dest='kinds', type=int, help='Event kind', default=1)
     parser.add_argument('--since', dest='since', type=str, help='since timestamp')
+    parser.add_argument('--raw', dest='raw', type=str, help='Raw request to filter event, use single quote')
     parser.add_argument('--nym-client,', dest='nymClient', type=str, help='URI of local nym-client',
                         default='ws://127.0.0.1:1977')
     parser.add_argument('--debug', dest="debug", type=bool, help="Debug enabled", default=False)
@@ -250,6 +259,7 @@ async def main():
             author = PublicKey.from_npub(args.author).hex()
             since = args.since
             limit = args.limit
+            raw = args.raw
 
             if since is not None:
                 filters = Filters([Filter(authors=[author], since=since, limit=limit, kinds=[kinds])])
@@ -257,14 +267,20 @@ async def main():
                 filters = Filters([Filter(authors=[author], kinds=[kinds], limit=limit)])
 
             subscription_id = uuid.uuid1().hex[:9]
-            request = [ClientMessageType.REQUEST, subscription_id]
-            request.extend(filters.to_json_array())
+            if raw is None:
+                request = [ClientMessageType.REQUEST, subscription_id]
+                request.extend(filters.to_json_array())
+                request = json.dumps(request)
+            else:
+                request = raw
 
             print(f"\n📟 Filter existing events with {request} query using relay {relay}")
             sub = loop.create_task(
-                subscribe(nym.Serve.createPayload(relay, json.dumps(request), padding=False), nymClient, relay,
+                subscribe(nym.Serve.createPayload(relay, request, padding=False), nymClient, relay,
                           runForever=True))
             await sub
+
+
 
     except KeyboardInterrupt:
         pending_tasks = [
