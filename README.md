@@ -50,7 +50,7 @@ If you want to include our image in your docker-compose, check our docker-compos
 
 ### Docker Compose
 
-This option will run an instance of the nym-client and a nostr relay, for convenience, in addition to a docker image of this code (built locally). If you want to run our image of nostr-nym, instead of building yours locally, add `-f docker-compose.nobuild.yml` to the `docker compose` commands below to use the docker-compose.nobuild.yml file instead.
+This option will run an instance of the nym-client and a nostr relay, for convenience, in addition to a docker image of this code (fetched from Docker Hub). If you want to build yours locally, instead of using our image, add `-f docker-compose.build.yml` to the `docker compose` commands below to use the _docker-compose.build.yml_ file instead.
 
 ```bash
 # Clone this repository

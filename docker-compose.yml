@@ -14,10 +14,9 @@ services:
 
   proxy:
     hostname: proxy
-    build: .
+    image: notrustverify/nostr-nym
     restart: unless-stopped
     environment:
-      #- NOSTR_RELAY_WS=wss://relay.damus.io
       - NOSTR_RELAY_WS=ws://relay:8080
       - NYM_CLIENT_WS=ws://nym-client:1977
     depends_on:
