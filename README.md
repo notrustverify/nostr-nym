@@ -60,7 +60,8 @@ git clone https://github.com/notrustverify/nostr-nym
 cd nostr-nym
 
 # Set the correct rights for docker containers to be allowed to access their volumes
-sudo chmod -R 10000:10000 ./nym-client-data
+mkdir ./nym-client-data
+sudo chown -R 10000:10000 ./nym-client-data
 
 # Build and start containers
 docker compose up -d
