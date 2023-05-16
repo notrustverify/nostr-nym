@@ -1,0 +1,25 @@
+version: '3.9'
+
+services:
+
+  relay:
+    hostname: relay
+    image: scsibug/nostr-rs-relay
+    restart: unless-stopped
+    ports:
+      - 7000:8080
+    volumes:
+      - ./relay/config.toml:/usr/src/app/config.toml
+      - ./relay/data:/usr/src/app/db
+
+  nym-client:
+    hostname: nym-client
+    image: notrustverify/nym-client
+    restart: unless-stopped
+    environment:
+      - NAME_CLIENT=nostr-nym
+      - LISTENING_ADDRESS=0.0.0.0
+    ports:
+      - 10977:1977
+    volumes:
+       - ./nym-client-data/:/home/user/.nym/

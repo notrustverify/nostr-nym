@@ -1,6 +1,5 @@
 version: '3.9'
 
-
 services:
 
   relay:
@@ -15,25 +14,22 @@ services:
 
   proxy:
     hostname: proxy
-    build:
-      dockerfile: proxy/Dockerfile
+    build: .
     restart: unless-stopped
     environment:
-      #- NOSTR_RELAY_URI_PORT=wss://relay.damus.io
-      - NOSTR_RELAY_URI_PORT=ws://relay:8080
-      - NYM_CLIENT_URI=ws://nym-client:1977
+      #- NOSTR_RELAY_WS=wss://relay.damus.io
+      - NOSTR_RELAY_WS=ws://relay:8080
+      - NYM_CLIENT_WS=ws://nym-client:1977
     depends_on:
       - nym-client
       - relay
 
   nym-client:
     hostname: nym-client
-    build:
-      context: ./nym-client
-      dockerfile: Dockerfile.nobuild
+    image: notrustverify/nym-client
     restart: unless-stopped
     environment:
       - NAME_CLIENT=nostr-nym
       - LISTENING_ADDRESS=0.0.0.0
     volumes:
-       - ./nym-client/nym-data/:/home/user/.nym/
+       - ./nym-client-data/:/home/user/.nym/
