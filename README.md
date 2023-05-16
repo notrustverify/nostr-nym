@@ -13,9 +13,9 @@ These can be provided by arguments or environement variable. Environment variabl
 |:-----:|:-----:|:-----:|:-----:|-----|
 | `-l` | `--log-level` | `LOG_LEVEL` | `info` | Log level |
 | `-c` | `--nym-client-ws` | `NYM_CLIENT_WS` | `127.0.0.1:1977` | Address of the nym-client to listen to |
-| `-r` | -`-nostr-relay-ws` | `NOSTR_RELAY_WS` | `127.0.0.1:1700` | Address of the nostr relay to forward messages to |
+| `-r` | `--nostr-relay-ws` | `NOSTR_RELAY_WS` | `127.0.0.1:1700` | Address of the nostr relay to forward messages to |
 | `-d` | `--nym-client-log-level` | `NYM_CLIENT_LOG_LEVEL` | `""` | Log level of socket connection to Nym mixnet |
-| `-s` | -`-nostr-relay-log-level` | `NOSTR_RELAY_LOG_LEVEL` | `""` | Log level of socket connection to Nostr relay |
+| `-s` | `--nostr-relay-log-level` | `NOSTR_RELAY_LOG_LEVEL` | `""` | Log level of socket connection to Nostr relay |
 
 The log level values that can be used are: `trace`, `debug`, `info`, `warn`, `error` (`fatal` and `panic` are not used). Leave blank to disable logging.
 
