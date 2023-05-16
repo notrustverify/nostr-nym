@@ -1,4 +1,5 @@
 relay/*
 !relay/config.toml
 
+docker-compose.yml
 nym-client-data/*

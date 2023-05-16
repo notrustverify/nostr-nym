@@ -58,6 +58,7 @@ git clone https://github.com/notrustverify/nostr-nym
 
 # Move inside the freshly downloaded folder
 cd nostr-nym
+cp example.docker-compose.yml docker-compose.yml
 
 # Set the correct rights for docker containers to be allowed to access their volumes
 mkdir ./nym-client-data
